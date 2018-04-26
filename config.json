@@ -1,0 +1,7 @@
+{	
+	"methodToAnalyze" : "main",
+	"requiredConstructs" : [
+		"for",
+		"if"
+	]
+}

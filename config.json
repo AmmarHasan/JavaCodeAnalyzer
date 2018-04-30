@@ -1,0 +1,8 @@
+{	
+	"classToAnalyze" : "Laptop",
+	"methodToAnalyze" : "batteryStatus",
+	"requiredConstructs" : [
+		"for",
+		"if"
+	]
+}

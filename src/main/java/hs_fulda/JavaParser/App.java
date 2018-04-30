@@ -5,6 +5,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.printer.JsonPrinter;
 
 import org.json.simple.JSONArray;
@@ -17,19 +19,18 @@ public class App
     {
 		JSONObject config = parseConfigFile(args[0]);
 		FileInputStream fileInputStream = getFileInputStream(args[1]);
-		JSONObject astAsJson = parseJavaCode(fileInputStream);
+		parseJavaCode(fileInputStream, config);
     }
 
     private static JSONObject parseConfigFile(String configFilePath) {
 		JSONParser parser = new JSONParser();	
 		try {
 			JSONObject config = (JSONObject) parser.parse(new FileReader(configFilePath));
-    		System.out.println(config.get("methodToAnalyze"));
     		
     		JSONArray requiredConstructs = (JSONArray) config.get("requiredConstructs");
-    		for (Object requiredConstruct : requiredConstructs) {
-    			System.out.println(requiredConstruct);
-    		}
+			for (Object requiredConstruct : requiredConstructs) {
+				System.out.println(requiredConstruct);
+			}
     		return config;
         } catch(IndexOutOfBoundsException indexOutOfBoundsException) {
         	System.out.println("No config file was provided.");
@@ -49,22 +50,19 @@ public class App
 		}
 		return javaCodeFileStream;
 	}
-	
-	private static JSONObject parseJavaCode(FileInputStream javaCodeFileStream) {
-		CompilationUnit compilationUnit = JavaParser.parse(javaCodeFileStream);
-        JsonPrinter printer = new JsonPrinter(true);
-        String ASTString = printer.output(compilationUnit.findRootNode());
 
-        JSONParser jsonParser = new JSONParser();
-        JSONObject ASTJson = new JSONObject();
-        try {
-        	ASTJson = (JSONObject) jsonParser.parse(ASTString);
-        	System.out.println(ASTJson.get("types"));
-        	return ASTJson;
-        } catch(Exception exception) {
-        	System.out.println(exception);
-        }
-        return null;
+	private static void parseJavaCode (FileInputStream javaCodeFileStream, JSONObject config) {
+		CompilationUnit cu = JavaParser.parse(javaCodeFileStream);
+		cu.findAll(ClassOrInterfaceDeclaration.class).stream()
+        .filter(c -> c.getNameAsString().equals( config.get("classToAnalyze"))
+        			&& !c.isInterface() && !c.isAbstract() )
+        .forEach(c -> {
+            c.findAll(MethodDeclaration.class).stream()
+            	.filter(method -> method.getNameAsString().equals(config.get("methodToAnalyze")))
+            	.forEach(method -> {
+            		System.out.println(method);
+            	});
+        });
 	}
 
 }

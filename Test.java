@@ -29,6 +29,9 @@ class Laptop {
 		  System.out.println( "Charge now.");
 	  }
     
+	  for (int i=0 ; i< 3; i++) {
+		  
+	  }
   }
 } 
 

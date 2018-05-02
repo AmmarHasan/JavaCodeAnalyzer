@@ -10,3 +10,9 @@ Goal of the project is to process java Code submitted by students to supply feed
 - Think about the format of the rules files, make a UML diagram.
 - Integrate the JavaParser in our Java program.
 - Parse the running “Hello World” Java code using our Program and generate an AST(Abstract Syntax Tree).
+
+### Week 2 Todos (26 April 2018) 
+
+- Take configuration and code file paths as command line argument
+- Discuss structure of config file and parse it.
+- Check specific method for a specific keyword in the code file.

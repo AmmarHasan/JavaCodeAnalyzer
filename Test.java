@@ -7,7 +7,7 @@ class Computer {
     System.out.println("Shuting down your PC soon...");
   }
  
-class Laptop {
+public static class Laptop {
 	
 	private static int batteryPercentage;
 	
@@ -23,15 +23,15 @@ class Laptop {
   void batteryStatus() {
 	  int i;
 	  System.out.println( batteryPercentage +"% Battery available.");
-	  if (this.batteryPercentage > 80) {
+	  {if (this.batteryPercentage > 80) {
 		  System.out.println( "You are good!");
 	  } else {
 		  System.out.println( "Charge now.");
-	  }
+	  }}
     
-	  for (int i=0 ; i< 3; i++) {
-		  
-	  }
+//	  for (int i=0 ; i< 3; i++) {
+//		  
+//	  }
   }
 } 
 

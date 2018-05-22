@@ -1,8 +1,23 @@
-{	
-	"classToAnalyze" : "Laptop",
-	"methodToAnalyze" : "batteryStatus",
-	"requiredConstructs" : [
-		"for",
-		"if"
-	]
+{
+	"requiredClass" : {
+		"name" : "Laptop",
+		"requiredAccessModifier" : "public",
+		"forbiddenAccessModifier" : [
+				"private",
+				"protected"
+			],
+		"requiredModifiers": ["static"],
+		"forbiddenModifier" : ["abstract"],
+		"requiredParentClass": "Computer",
+		"requiredMethod" : {
+			"name" : "batteryStatus",
+			"requiredConstructs" : [
+				{
+					"name" : "if",
+					"level" : 0,
+					"required" : true
+				}
+			]
+		}
+	}
 }

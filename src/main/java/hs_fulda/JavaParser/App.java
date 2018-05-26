@@ -14,6 +14,7 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.stmt.ForStmt;
 import com.github.javaparser.ast.stmt.IfStmt;
 import org.json.simple.JSONArray;
@@ -55,6 +56,7 @@ public class App
 		return javaCodeFileStream;
 	}
 
+	@SuppressWarnings("deprecation")
 	private static boolean parseJavaCode (FileInputStream javaCodeFileStream, JSONObject config) {
 		CompilationUnit cu = JavaParser.parse(javaCodeFileStream);
 		String req_ClassName = config.get("name").toString();
@@ -114,6 +116,12 @@ public class App
 	    				long sum = methodNode.findAll(IfStmt.class).stream()
 	    				.count();
 	            		System.out.println("Found: "+sum);
+	            		//Check the Line where the statement appears in the system
+	            		for (IfStmt ifStmt : methodNode.getChildNodesByType(IfStmt.class)) {
+	            			printLine(ifStmt);
+	            			
+	            		}
+
 	            		if ( sum > 0) {
 	            			System.out.println("If Statement found");
 	            			successCounter++;
@@ -152,6 +160,10 @@ public class App
 			return false;
 		}
 	}
+	
+	private static void printLine(Node node) {
+        node.getRange().ifPresent(r -> System.out.println("line:"+r.begin.line));
+    }
 	
 	private static Stream<ClassOrInterfaceDeclaration> getFilteredClassStream(CompilationUnit cu,String req_ClassName,String accessMod,
 			ArrayList<String> f_accessMods,ArrayList<String> rMods,ArrayList<String> fMods,String req_Parent) {

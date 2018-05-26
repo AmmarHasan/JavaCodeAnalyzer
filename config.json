@@ -17,6 +17,12 @@
 					"level" : 0,
 					"required" : true
 				}
+				{
+					"name" : "for",
+					"level" : 0,
+					"required" : true
+				}
+				
 			]
 		}
 	}

@@ -1,0 +1,14 @@
+{
+  "requiredClass": {
+    "name": "Person",
+    "accessModifier": [
+      {
+        "name": "public"
+      },
+      {
+        "name": "private",
+        "forbidden": true
+      }
+    ]
+  }
+}

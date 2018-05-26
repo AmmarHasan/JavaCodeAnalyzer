@@ -1,0 +1,18 @@
+{
+  "requiredClass": {
+    "name": "StudentAdvisor",
+    "accessModifier": [
+      { "name": "public" },
+      { "name": "private", "forbidden": true }
+    ],
+    "parentClass": [
+      { "name": "Teacher" },
+      { "name": "Staff", "forbidden": true }
+    ],
+    "interfaceToImplement": [
+      { "name": "IAdvisor" },
+      { "name": "IExample" },
+      { "name": "IForbiddenExample", "forbidden": true }
+    ]
+  }
+}

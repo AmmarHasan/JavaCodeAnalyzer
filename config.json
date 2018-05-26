@@ -45,25 +45,25 @@
 					"string",
 					"int",
 					"ArrayList<string>"
-                ],
-                "accessModifier": [
-                    {
-                        "name": "public"
-                    },
-                    {
-                        "name": "private",
-                        "forbidden": true
-                    }
-                ],
-                "modifier": [
-                    {
-                        "name": "final"
-                    },
-                    {
-                        "name": "abstract",
-                        "forbidden": true
-                    }
-                ]
+				],
+				"accessModifier": [
+					{
+						"name": "public"
+					},
+					{
+						"name": "private",
+						"forbidden": true
+					}
+				],
+				"modifier": [
+					{
+						"name": "final"
+					},
+					{
+						"name": "abstract",
+						"forbidden": true
+					}
+				]
 			},
 			{
 				"name": "print",

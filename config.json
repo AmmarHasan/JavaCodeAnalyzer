@@ -1,105 +1,23 @@
 {
-	"requiredClass": {
-		"name": "Laptop",
-		"accessModifier": [
-			{
-				"name": "public"
-			},
-			{
-				"name": "private",
-				"forbidden": true
-			}
-		],
-		"modifier": [
-			{
-				"name": "final"
-			},
-			{
-				"name": "abstract",
-				"forbidden": true
-			}
-		],
-		"parentClass": [
-			{
-				"name": "Computer"
-			},
-			{
-				"name": "System",
-				"forbidden": true
-			}
-		],
-		"interfaceToImplement": [
-			{
-				"name": "IComputer"
-			},
-			{
-				"name": "ISystem",
-				"forbidden": true
-			}
-		],
-		"requiredMethods": [
-			{
-				"name": "print",
-				"return": "",
-				"parameters": [
-					"string",
-					"int",
-					"ArrayList<string>"
-				],
-				"accessModifier": [
-					{
-						"name": "public"
-					},
-					{
-						"name": "private",
-						"forbidden": true
-					}
-				],
-				"modifier": [
-					{
-						"name": "final"
-					},
-					{
-						"name": "abstract",
-						"forbidden": true
-					}
-				]
-			},
-			{
-				"name": "print",
-				"anotations": [
-					"@Override"
-				]
-			},
-			{
-				"name": "reverseList",
-				"restrictUserDefinedMethod": true,
-				"builtInMethods": [
-					{
-						"name": "reverse",
-						"level": 1,
-						"forbidden": true
-					}
-				],
-				"operators": [
-					{
-						"name": "+",
-						"level": 2,
-						"forbidden": true
-					}
-				],
-				"constructs": [
-					{
-						"name": "for",
-						"level": 0
-					},
-					{
-						"name": "if",
-						"level": 1,
-						"forbidden": true
-					}
-				]
-			}
-		]
+	"requiredClass" : {
+		"name" : "Laptop",
+		"requiredAccessModifier" : "public",
+		"forbiddenAccessModifier" : [
+				"private",
+				"protected"
+			],
+		"requiredModifiers": ["static"],
+		"forbiddenModifier" : ["abstract"],
+		"requiredParentClass": "Computer",
+		"requiredMethod" : {
+			"name" : "batteryStatus",
+			"requiredConstructs" : [
+				{
+					"name" : "if",
+					"level" : 0,
+					"required" : true
+				}
+			]
+		}
 	}
 }

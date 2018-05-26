@@ -1,0 +1,14 @@
+{
+  "requiredClass": {
+    "name": "Person",
+    "modifier": [
+      {
+        "name": "static"
+      },
+      {
+        "name": "abstract",
+        "forbidden": true
+      }
+    ]
+  }
+}

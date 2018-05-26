@@ -1,0 +1,24 @@
+{
+  "requiredClass": {
+    "name": "DemoMath",
+    "requiredMethods": [
+      {
+        "name": "multiply",
+        "accessModifier": [
+          { "name": "public" },
+          { "name": "private", "forbidden": true }
+        ],
+        "modifier": [ { "name": "static" } ],
+
+        "return": "long",
+        "parameters": [ "int", "int" ],
+
+        "restrictUserDefinedMethod": true,
+        "builtInMethods": [ { "name": "multiplyFull", "forbidden": true } ],
+
+        "operators": [ { "name": "*", "forbidden": true } ],
+        "constructs": [ { "name": "for" } ]
+      }
+    ]
+  }
+}

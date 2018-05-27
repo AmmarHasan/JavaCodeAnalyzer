@@ -1,21 +1,17 @@
 package hs_fulda.JavaParser;
 
-import java.awt.List;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Optional;
-import java.util.stream.Stream;
-
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.Node;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.Range;
+import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.MethodDeclaration;
-import com.github.javaparser.ast.stmt.ForStmt;
-import com.github.javaparser.ast.stmt.IfStmt;
+import com.github.javaparser.ast.visitor.VoidVisitor;
+import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -26,16 +22,8 @@ public class Analyzer {
 		JSONObject config = Analyzer.parseConfigFile(configFilePath);
 		FileInputStream fileInputStream = getFileInputStream(javaFilePath);
 		CompilationUnit cu = JavaParser.parse(fileInputStream);
-		printAST(cu);
-		// boolean success = analyzeJavaCode(cu, config);
-		// System.out.println( "Test Program Success: "+success);
-	}
-
-	public static void parseJavaCode(String javaCode, String configFilePath) {
-		JSONObject config = Analyzer.parseConfigFile(configFilePath);
-		CompilationUnit cu = JavaParser.parse(javaCode);
-		boolean success = analyzeJavaCode(cu, config);
-		System.out.println("Test Program Success: " + success);
+		
+		checkMethods ( cu ,config);
 	}
 
 	private static JSONObject parseConfigFile(String configFilePath) {
@@ -52,7 +40,6 @@ public class Analyzer {
 			return null;
 		}
 	}
-
 	private static FileInputStream getFileInputStream(String javaCodeFilepath) {
 		FileInputStream javaCodeFileStream = null;
 		try {
@@ -63,147 +50,170 @@ public class Analyzer {
 		return javaCodeFileStream;
 	}
 
-	private static boolean analyzeJavaCode(CompilationUnit cu, JSONObject config) {
-		String req_ClassName = config.get("name").toString();
-		String req_AccesModifier = config.get("requiredAccessModifier").toString();
-		String req_Parent = config.get("requiredParentClass").toString();
-
-		System.out.println("Required Class: " + req_ClassName);
-		System.out.println("Required Acces Modifier: " + req_AccesModifier);
-		System.out.println("Required Parent Modifier: " + req_Parent);
-
-		JSONArray forbdn_AccesModifiers = (JSONArray) config.get("forbiddenAccessModifier");
-		ArrayList<String> f_accessMods = new ArrayList<String>();
-		for (Object forbdn_AccesModifier : forbdn_AccesModifiers) {
-			f_accessMods.add(forbdn_AccesModifier.toString());
-			System.out.println("Forbidden Access Modifiers: " + forbdn_AccesModifier);
-		}
-		JSONArray reqd_Modifiers = (JSONArray) config.get("requiredModifiers");
-		ArrayList<String> r_Mods = new ArrayList<String>();
-		for (Object reqd_Modifier : reqd_Modifiers) {
-			r_Mods.add(reqd_Modifier.toString());
-			System.out.println("Required Modifiers: " + reqd_Modifier);
-		}
-		JSONArray forbdn_Modifiers = (JSONArray) config.get("forbiddenModifier");
-		ArrayList<String> f_Mods = new ArrayList<String>();
-		for (Object forbdn_Modifier : forbdn_Modifiers) {
-			f_Mods.add(forbdn_Modifier.toString());
-			System.out.println("Forbidden Modifiers: " + forbdn_Modifier);
-		}
-
-		Stream<ClassOrInterfaceDeclaration> stream_Class = getFilteredClassStream(cu, req_ClassName, req_AccesModifier,
-				f_accessMods, r_Mods, f_Mods, req_Parent);
-
-		if (checkForClass(stream_Class)) {
-			stream_Class = getFilteredClassStream(cu, req_ClassName, req_AccesModifier, f_accessMods, r_Mods, f_Mods,
-					req_Parent);
-			ClassOrInterfaceDeclaration classNode = stream_Class.findFirst().get();
-			System.out.println("Found Class: " + classNode.getNameAsString());
-
-			// return true;
-			JSONObject methodRequirements = (JSONObject) config.get("requiredMethod");
-			String req_MethodName = methodRequirements.get("name").toString();
-			System.out.println("Required Method: " + req_MethodName);
-			Stream<MethodDeclaration> stream_Method = getFilteredMethodStream(classNode, req_MethodName);
-
-			if (checkForMethod(stream_Method)) {
-				stream_Method = getFilteredMethodStream(classNode, req_MethodName);
-				MethodDeclaration methodNode = stream_Method.findFirst().get();
-				System.out.println("Found Method: " + methodNode.getName());
-
-				JSONArray requiredConstructs = (JSONArray) methodRequirements.get("requiredConstructs");
-				int successCounter = 0;
-
-				for (Object requiredConstruct : requiredConstructs) {
-					JSONObject req_Construct = (JSONObject) requiredConstruct;
-					String req_ConstructName = req_Construct.get("name").toString();
-					System.out.println("Required: " + req_ConstructName);
-					if (req_ConstructName.equals("if")) {
-						long sum = methodNode.findAll(IfStmt.class).stream().count();
-						System.out.println("Found: " + sum);
-						if (sum > 0) {
-							System.out.println("If Statement found");
-							successCounter++;
-						} else {
-							System.out.println("If Statement Not found");
-							// return false;
-						}
-					} else if (req_ConstructName.equals("for")) {
-						long sum = methodNode.findAll(ForStmt.class).stream().count();
-						System.out.println("Found: " + sum);
-						if (sum > 0) {
-							System.out.println("For Statement found");
-							successCounter++;
-						} else {
-							System.out.println("For Statement Not found");
-							// return false;
-						}
-					} else {
-						System.out.println("Finding " + requiredConstruct + " not implemented.");
-					}
-				}
-				if (successCounter == requiredConstructs.size()) {
-					return true;
-				} else {
-					return false;
-				}
-			} else {
-				System.out.println("No Method found with the specified name.");
+	// New Parsing Methods
+	
+	private static void checkMethods (CompilationUnit cu, JSONObject config) {
+     	 
+     	 JSONArray requiredMethods = (JSONArray) config.get("requiredMethods");
+     	 for(int i = 0 ; i < requiredMethods.size() ; i++)
+     	 {
+     		JSONObject requiredMethod = (JSONObject) requiredMethods.get(i);
+     		if ( checkMethodSignature(cu,requiredMethod) ) {
+     			// test further
+     		}
+     	 }
+   }
+	
+	private static Boolean checkMethodSignature (CompilationUnit cu, JSONObject requiredMethod) {
+		Optional<CompilationUnit> classCu = checkMethodName ( cu, requiredMethod.get("name").toString() );
+ 		if (classCu.isPresent()) {
+ 			if (checkMethodReturnType ( classCu.get(), requiredMethod.get("return").toString())) {
+ 				if (checkMethodParameters ( classCu.get(), (JSONArray) requiredMethod.get("parameters") )) {
+ 					return true;
+ 				}else{
+ 					return false;
+ 				}
+ 			}else{
 				return false;
 			}
-		} else {
-			System.out.println("No Class found with the specified properties.");
+ 		}else{
 			return false;
+ 		}
+	}
+   
+	private static Optional<CompilationUnit> checkMethodName (CompilationUnit cu, String requiredName) {
+  	 
+		JSONObject required = new JSONObject ();
+		required.put("name", requiredName );
+		VoidVisitor<JSONObject> methodNameTester = new MethodNameTester ();
+		methodNameTester.visit(cu, required); 
+		displayResult(required);
+		Optional<CompilationUnit> optionalCu = (Optional<CompilationUnit>) required.get("cu");
+		return optionalCu;
+   }
+   
+	private static Boolean checkMethodReturnType (CompilationUnit cu, String requiredReturnType) {
+     	 
+		JSONObject required = new JSONObject ();
+		required.put("returnType", requiredReturnType );
+		VoidVisitor<JSONObject> methodReturnTypeTester = new MethodReturnTypeTester ();
+		methodReturnTypeTester.visit(cu, required); 
+		displayResult(required);
+		return (Boolean) required.get("success");
+   }
+   
+	private static Boolean checkMethodParameters (CompilationUnit cu, JSONArray requiredParametersArray) {
+   	 
+   	JSONObject requiredParameters = new JSONObject ();
+   	requiredParameters.put("parameters", requiredParametersArray );
+   	VoidVisitor<JSONObject> methodParametersTester = new MethodParametersTester ();
+   	methodParametersTester.visit(cu, requiredParameters); 
+   	displayResult(requiredParameters);
+   	return (Boolean) requiredParameters.get("success");
+   }
+   
+	private static void displayResult ( JSONObject result) {
+		if ( !(Boolean) result.get("success") ) {
+			System.out.println ("Error: " + result.get("errorCode"));
+		    System.out.println ("Location: " + ((Range) result.get("range")).begin);
 		}
-	}
-
-	private static Stream<ClassOrInterfaceDeclaration> getFilteredClassStream(CompilationUnit cu, String req_ClassName,
-			String accessMod, ArrayList<String> f_accessMods, ArrayList<String> rMods, ArrayList<String> fMods,
-			String req_Parent) {
-
-		return cu.findAll(ClassOrInterfaceDeclaration.class).stream().filter(c -> c.getNameAsString().equals(req_ClassName)
-				// Required Access Modifier
-				&& (accessMod.equals("public") ? c.isPublic() : true) && (accessMod.equals("private") ? c.isPrivate() : true)
-				&& (accessMod.equals("protected") ? c.isProtected() : true)
-				// Forbidden Access Modifier
-				&& (f_accessMods.contains("public") ? !c.isPublic() : true)
-				&& (f_accessMods.contains("protected") ? !c.isProtected() : true)
-				&& (f_accessMods.contains("private") ? !c.isPrivate() : true)
-				// Required Modifier
-				&& (rMods.contains("abstract") ? c.isAbstract() : true) && (rMods.contains("final") ? c.isFinal() : true)
-				&& (rMods.contains("static") ? c.isStatic() : true) && (rMods.contains("interface") ? c.isInterface() : true)
-				// Forbidden Modifier
-				&& (fMods.contains("abstract") ? !c.isAbstract() : true) && (fMods.contains("final") ? !c.isFinal() : true)
-				&& (fMods.contains("static") ? !c.isStatic() : true) && (rMods.contains("interface") ? !c.isInterface() : true))
-				.distinct();
-	}
-
-	private static Stream<MethodDeclaration> getFilteredMethodStream(ClassOrInterfaceDeclaration clas,
-			String req_MethodName) {
-		return clas.findAll(MethodDeclaration.class).stream()
-				.filter(method -> method.getNameAsString().equals(req_MethodName)).distinct();
-	}
-
-	private static boolean checkForClass(Stream<ClassOrInterfaceDeclaration> stream_Class) {
-		Stream<ClassOrInterfaceDeclaration> newStream = stream_Class;
-		long count = newStream.count();
-		if (count > 0) {
-			// System.out.println("Class Found: "+ count );
-			return true;
+		else {
+			System.out.println ("OK !");
 		}
-		return false;
+	    
 	}
+	
+   // Overriding Visit Methods
+   
+   private static class MethodNameTester extends VoidVisitorAdapter<JSONObject> {
 
-	private static boolean checkForMethod(Stream<MethodDeclaration> stream_Method) {
-		Stream<MethodDeclaration> newStream = stream_Method;
-		long count = newStream.count();
-		if (count > 0) {
-			// System.out.println("Method Found: "+ count );
-			return true;
-		}
-		return false;
-	}
+       @Override
+       public void visit(MethodDeclaration md, JSONObject jobject) { 
+           super.visit(md, jobject);
+           if ( jobject.containsKey("success") && (Boolean) jobject.get("success")) {
+           	return;
+           }
+           
+           String name = md.getNameAsString();
+           if ( name.equals(jobject.get("name").toString())) {
+           		jobject.put("success", true);
+              	jobject.put("errorCode", 0);
+              	jobject.put("range", md.getRange().get());
+              	jobject.put("cu", md.findCompilationUnit() );
+           }
+           else {
+           	jobject.put("success", false);
+           	jobject.put("errorCode", 210);
+           	jobject.put("range", md.getRange().get());
+           	jobject.put("cu", Optional.empty() );
+           }
+       }
+   }
+   
+   private static class MethodReturnTypeTester extends VoidVisitorAdapter<JSONObject> {
 
+       @Override
+       public void visit(MethodDeclaration md, JSONObject jobject) { 
+           super.visit(md, jobject);
+           if ( jobject.containsKey("success") && (Boolean) jobject.get("success")) {
+           	return;
+           }
+           
+           String returnType = md.getTypeAsString();
+           
+           if ( returnType.equals(jobject.get("returnType").toString())) {
+           	jobject.put("success", true);
+              	jobject.put("errorCode", 0);
+               jobject.put("range", md.getRange().get());
+               jobject.put("cu", md.findCompilationUnit() );
+           }
+           else {
+           	jobject.put("success", false);
+           	jobject.put("errorCode", 210);
+           	jobject.put("range", md.getRange().get());
+           }
+       }
+   }
+   
+   private static class MethodParametersTester extends VoidVisitorAdapter<JSONObject> {
+
+       @Override
+       public void visit(MethodDeclaration md, JSONObject jobject) { //ArrayList<String> requiredParameters
+           super.visit(md, jobject);
+           if ( jobject.containsKey("success") && (Boolean) jobject.get("success")) {
+           	return;
+           }
+           
+           NodeList<com.github.javaparser.ast.body.Parameter> codeParameters = md.getParameters() ;
+           JSONArray requiredParametersJSONArray = (JSONArray) jobject.get("parameters");
+           if ( requiredParametersJSONArray.size() == codeParameters.size() ) {
+           	int matchCounter = 0 ;
+           	for(int i = 0 ; i < requiredParametersJSONArray.size() ; i++){
+           		if (requiredParametersJSONArray.get(i).toString().equalsIgnoreCase(codeParameters.get(i).getTypeAsString())) {
+           			matchCounter ++;
+           		}
+           	}
+           	if (matchCounter == codeParameters.size()) {
+           		jobject.put("success", true);
+               	jobject.put("errorCode", 0);
+               	jobject.put("range", md.getRange().get());
+           	} else {
+               	jobject.put("success", false);
+               	jobject.put("errorCode", 231);
+               	jobject.put("range", md.getRange().get());
+               }
+           	
+           }
+           else {
+           	jobject.put("success", false);
+           	jobject.put("errorCode", 230);
+           	jobject.put("range", md.getRange().get());
+           }
+       }
+   }
+
+  
+   
 	private static void printAST(CompilationUnit compilationUnit) {
 		JsonPrinter printer = new JsonPrinter(true);
 		String astString = printer.output(compilationUnit.findRootNode());

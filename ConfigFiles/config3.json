@@ -2,17 +2,17 @@
   "requiredClass": {
     "name": "StudentAdvisor",
     "accessModifier": [
-      { "name": "public" },
+      { "name": "public" , "forbidden": false},
       { "name": "private", "forbidden": true }
     ],
     "parentClass": [
-      { "name": "Teacher" },
-      { "name": "Staff", "forbidden": true }
+      { "name": "TEACHER", "forbidden": false },
+      { "name": "STAFF", "forbidden": true }
     ],
     "interfaceToImplement": [
-      { "name": "IAdvisor" },
-      { "name": "IExample" },
-      { "name": "IForbiddenExample", "forbidden": true }
+      { "name": "IADVISOR", "forbidden": false },
+      { "name": "IEXAMPLE", "forbidden": true },
+      { "name": "IFORBIDDENEXAMPLE", "forbidden": true }
     ]
   }
 }

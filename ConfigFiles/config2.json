@@ -3,10 +3,11 @@
     "name": "Person",
     "modifier": [
       {
-        "name": "static"
+        "name": "abstract"
+        "forbidden": false
       },
       {
-        "name": "abstract",
+        "name": "static",
         "forbidden": true
       }
     ]

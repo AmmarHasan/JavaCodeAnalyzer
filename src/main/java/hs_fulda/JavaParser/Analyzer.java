@@ -52,27 +52,42 @@ public class Analyzer {
 			//Check Class Access Modifier
 			//JSONObject req_AccesModifier = (JSONObject) config.get("accessModifier");
 			
-			JSONArray requiredConstructs = (JSONArray) config.get("accessModifier");
-			int successCounter = 0;
-			
-			
+	/*		JSONArray requiredConstructs = (JSONArray) config.get("accessModifier");
 			for (Object requiredConstruct : requiredConstructs) {
 				JSONObject req_Construct = (JSONObject) requiredConstruct;
 				String req_ConstructName = req_Construct.get("name").toString();
 				String req_ConstructRule = req_Construct.get("forbidden").toString();
 				
 				
-				//System.out.println("Found Required Access Modifier: "+classNode.getModifiers().toString().toLowerCase());
+				String compare = classNode.getModifiers().toString().toLowerCase();
+				
+				if(compare.contains((CharSequence) req_ConstructName) && req_ConstructRule.equalsIgnoreCase("false")) {
 				
 				if(req_ConstructName.equalsIgnoreCase(classNode.getModifiers().toString().toLowerCase()) && req_ConstructRule.equalsIgnoreCase("false")) {
 					System.out.println("Required Access Modifier: " + req_ConstructName);
 					System.out.println("Found Required Access Modifier: "+classNode.getModifiers().toString().toLowerCase());
 					
 				} else if(req_ConstructName.equalsIgnoreCase(classNode.getModifiers().toString().toLowerCase()) && req_ConstructRule.equalsIgnoreCase("true")) {
-					System.out.println("Found Forbidden Access Modifier: "+classNode.getModifiers().toString());
+					System.out.println("Found Forbidden Access Modifier: "+classNode.getModifiers().toString().toLowerCase());
 				} 
+	 
+			}*/
+			JSONArray neededConstructs = (JSONArray) config.get("modifier");
+			for (Object neededConstruct : neededConstructs) {
+				JSONObject req_Construct = (JSONObject) neededConstruct;
+				String req_ConstructName = req_Construct.get("name").toString();
+				String req_ConstructRule = req_Construct.get("forbidden").toString();
 				
-				 
+				String compare = classNode.getModifiers().toString().toLowerCase();
+				
+				if(compare.contains((CharSequence) req_ConstructName) && req_ConstructRule.equalsIgnoreCase("false")) {
+					System.out.println("Required Modifier: " + req_ConstructName);
+					System.out.println("Found Required Modifier: "+req_ConstructName);
+					
+				} else if(compare.contains((CharSequence) req_ConstructName) && req_ConstructRule.equalsIgnoreCase("true")) {
+					System.out.println("Found Forbidden Modifier: "+req_ConstructName);
+				} 
+	 
 			}
 	
 		}

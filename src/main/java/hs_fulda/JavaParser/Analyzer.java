@@ -3,10 +3,13 @@ package hs_fulda.JavaParser;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.util.EnumSet;
 import java.util.Optional;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.Range;
+import com.github.javaparser.ast.Modifier;
+import com.github.javaparser.ast.AccessSpecifier;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.visitor.VoidVisitor;
@@ -58,26 +61,46 @@ public class Analyzer {
      	 for(int i = 0 ; i < requiredMethods.size() ; i++)
      	 {
      		JSONObject requiredMethod = (JSONObject) requiredMethods.get(i);
-     		if ( checkMethodSignature(cu,requiredMethod) ) {
+     		Optional<CompilationUnit> classCu = checkMethodSignature(cu,requiredMethod);
+     		if ( classCu.isPresent() ) {
      			// test further
+     			JSONArray requiredAMods = (JSONArray) requiredMethod.get("accessModifiers");
+     			int counter = 0;
+     			for(int j = 0; j < requiredAMods.size() ; j++){
+     	     		JSONObject requiredAMod = (JSONObject) requiredAMods.get(j);
+     	     		if (checkMethodAccessModifier (classCu.get(), requiredAMod)) {
+     	     			counter ++;
+     	     		}
+     	     	}
+     			if (counter == requiredAMods.size() ){
+     				JSONArray requiredMods = (JSONArray) requiredMethod.get("modifiers");
+         			for(int j = 0 ; j < requiredMods.size() ; j++){
+         	     		JSONObject requiredMod = (JSONObject) requiredMods.get(j);
+         	     		if (checkMethodOtherModifier (classCu.get(), requiredMod)) {
+         	     			
+         	     		}
+         	     	}
+     			}
+     			
+     			
      		}
      	 }
    }
 	
-	private static Boolean checkMethodSignature (CompilationUnit cu, JSONObject requiredMethod) {
+	private static Optional<CompilationUnit> checkMethodSignature (CompilationUnit cu, JSONObject requiredMethod) {
 		Optional<CompilationUnit> classCu = checkMethodName ( cu, requiredMethod.get("name").toString() );
  		if (classCu.isPresent()) {
  			if (checkMethodReturnType ( classCu.get(), requiredMethod.get("return").toString())) {
  				if (checkMethodParameters ( classCu.get(), (JSONArray) requiredMethod.get("parameters") )) {
- 					return true;
+ 					return classCu;
  				}else{
- 					return false;
+ 					return Optional.empty();
  				}
  			}else{
-				return false;
+				return Optional.empty();
 			}
  		}else{
-			return false;
+			return Optional.empty();
  		}
 	}
    
@@ -110,8 +133,44 @@ public class Analyzer {
    	methodParametersTester.visit(cu, requiredParameters); 
    	displayResult(requiredParameters);
    	return (Boolean) requiredParameters.get("success");
-   }
+	}
+	
+	private static Boolean checkMethodAccessModifier (CompilationUnit cu, JSONObject requiredAccessModifier ) {
+	   	 
+	   	JSONObject required = new JSONObject ();
+	   	String requiredModifierName = requiredAccessModifier.get("name").toString();
+	   	Boolean requirement = true;
+	   	if(requiredAccessModifier.containsKey("forbidden") ){
+	   		if ( (Boolean) requiredAccessModifier.get("forbidden") ) {
+	   			requirement = false;
+	   		}
+	   	}
+	   	required.put("requiredModifierName", requiredModifierName );
+	   	required.put("requirement", requirement);
+	   	VoidVisitor<JSONObject> methodAccessModifierTester = new MethodAccessModifierTester ();
+	   	methodAccessModifierTester.visit(cu, required); 
+	   	displayResult(required);
+	   	return (Boolean) required.get("success");
+	}
    
+	private static Boolean checkMethodOtherModifier (CompilationUnit cu, JSONObject requiredModifier ) {
+	   	 
+	   	JSONObject required = new JSONObject ();
+	   	String requiredModifierName = requiredModifier.get("name").toString();
+	   	Boolean requirement = true;
+	   	if(requiredModifier.containsKey("forbidden") ){
+	   		if ( (Boolean) requiredModifier.get("forbidden") ) {
+	   			requirement = false;
+	   		}
+	   	}
+	   	required.put("requiredModifierName", requiredModifierName );
+	   	required.put("requirement", requirement);
+	   	VoidVisitor<JSONObject> methodOtherModifierTester = new MethodOtherModifierTester ();
+	   	methodOtherModifierTester.visit(cu, required); 
+	   	displayResult(required);
+	   	return (Boolean) required.get("success");
+	}
+	
 	private static void displayResult ( JSONObject result) {
 		if ( !(Boolean) result.get("success") ) {
 			System.out.println ("Error: " + result.get("errorCode"));
@@ -212,6 +271,72 @@ public class Analyzer {
        }
    }
 
+   private static class MethodAccessModifierTester extends VoidVisitorAdapter<JSONObject> {
+
+       @Override
+       public void visit(MethodDeclaration md, JSONObject jobject) { 
+           super.visit(md, jobject);
+           if ( jobject.containsKey("success") && (Boolean) jobject.get("success")) {
+        	   return;
+           }
+           
+           EnumSet<Modifier> modifiers = md.getModifiers();
+           AccessSpecifier accessSpecifier = Modifier.getAccessSpecifier(modifiers);
+           String accessSpecifierString = accessSpecifier.asString();
+           Boolean requirement = (Boolean) jobject.get("requirement");
+           String reqdAccessSpecifier = jobject.get("requiredModifierName").toString();
+           
+           if ( accessSpecifierString.equals(reqdAccessSpecifier) == requirement) {
+           		jobject.put("success", true);
+              	jobject.put("errorCode", 0);
+              	jobject.put("range", md.getRange().get());
+           }
+           else {
+           	jobject.put("success", false);
+           	jobject.put("errorCode", 210);
+           	jobject.put("range", md.getRange().get());
+           	jobject.put("cu", Optional.empty() );
+           }
+       }
+   }
+   
+   private static class MethodOtherModifierTester extends VoidVisitorAdapter<JSONObject> {
+
+       @Override
+       public void visit(MethodDeclaration md, JSONObject jobject) { 
+           super.visit(md, jobject);
+           if ( jobject.containsKey("success") && (Boolean) jobject.get("success")) {
+        	   return;
+           }
+           
+           EnumSet<Modifier> modifiers = md.getModifiers();
+           AccessSpecifier accessSpecifier = Modifier.getAccessSpecifier(modifiers);
+           String accessSpecifierString = accessSpecifier.asString();
+           Boolean requirement = (Boolean) jobject.get("requirement");
+           String reqdSpecifier = jobject.get("requiredModifierName").toString();
+           Boolean modifierFound = false;
+           for ( Modifier modifier : modifiers ) {
+        	   if ( modifier.asString().equalsIgnoreCase(reqdSpecifier) ) {
+        		   modifierFound = true;
+        		   break;
+        	   }
+           }
+           
+           if ( modifierFound == requirement) {
+           		jobject.put("success", true);
+              	jobject.put("errorCode", 0);
+              	jobject.put("range", md.getRange().get());
+           }
+           else {
+           		jobject.put("success", false);
+           		jobject.put("errorCode", 210);
+           		jobject.put("range", md.getRange().get());
+           		jobject.put("cu", Optional.empty() );
+           }
+       }
+   }
+   
+//   private static void putResult ( JSONObject result) {}
   
    
 	private static void printAST(CompilationUnit compilationUnit) {

@@ -3,11 +3,11 @@
     "name": "Person",
     "accessModifier": [
       {
-        "name": "[public]"
+        "name": "public"
         "forbidden": false
       },
       {
-        "name": "[private]",
+        "name": "private",
         "forbidden": true
       }
     ]

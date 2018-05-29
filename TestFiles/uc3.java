@@ -1,11 +1,11 @@
 
 // Use Case 3 : Class with specific Parent class and implementing specific Interfaces
 
-public class StudentAdvisor extends Teacher implements IAdvisor, IExample {
-    public advise() {
-        System.out.print("Advise students");
-    }
-} 
+//public class StudentAdvisor extends Teacher implements IAdvisor, IExample {
+//    public advise() {
+//        System.out.print("Advise students");
+//    }
+//} 
 
 /* Following examples will result in error */
 
@@ -24,11 +24,11 @@ public class StudentAdvisor extends Teacher implements IAdvisor, IExample {
 // }
 
 /* Problem: Does not implement IAdvisor, IExample */
-// public class StudentAdvisor extends Teacher {
-//     public advise() {
-//         System.out.print("Advise students");
-//     }
-// } 
+ public class StudentAdvisor extends Teacher {
+     public advise() {
+         System.out.print("Advise students");
+     }
+ } 
 
 /* Problem: Does not implement IExample */
 // public class StudentAdvisor extends Teacher implements IAdvisor {

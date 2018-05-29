@@ -96,16 +96,20 @@ public class Analyzer {
 					break;
 				} else if(isContain(compSuper, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("true")) {
 					System.out.println("Found Forbidden Parent Class: "+ req_ConstructName);
+					printLine(classNode);
 					break;
 				} else if(classNode.getExtendedTypes().isEmpty()) {
 					System.out.println("No Parent Class Extended");
+					printLine(classNode);
 					break;
 				}else if(isContain(compSuper, req_ConstructName) == false && req_ConstructRule.equalsIgnoreCase("false")) {
 					System.out.println("Required Parent Class not Extended: "+ req_ConstructName);
+					printLine(classNode);
 					
 				}
 				else if(isContain(compSuper, req_ConstructName) == false) {
 					System.out.println("Extended an unspecified Parent Class");
+					printLine(classNode);
 					break;
 				}
 				
@@ -128,14 +132,17 @@ public class Analyzer {
 					
 				} else if(isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("true")) {
 					System.out.println("Found Forbidden Interface: "+ req_ConstructName);
+					printLine(classNode);
 				}else if(classNode.getImplementedTypes().isEmpty()) {
 					System.out.println("No Interface Implemented");
+					printLine(classNode);
 					break;
 				}else if(isContain(compare, req_ConstructName) == false && req_ConstructRule.equalsIgnoreCase("false")) {
 					System.out.println("Required Interface not Implemented: "+ req_ConstructName);
-					
+					printLine(classNode);
 				}else if(isContain(compare, req_ConstructName) == false && req_ConstructRule.equalsIgnoreCase("false")) {
 					System.out.println("Implemented an unspecified Interface");
+					printLine(classNode);
 					break;
 				}
 				
@@ -144,6 +151,10 @@ public class Analyzer {
 		}
 		return false;	
 	}
+	
+	private static void printLine(Node node) {
+        node.getRange().ifPresent(r -> System.out.println("line: "+r.begin.line));
+    }
 
 	public static void parseJavaCode(String javaCode, String configFilePath) {
 		JSONObject config = Analyzer.parseConfigFile(configFilePath);

@@ -7,11 +7,12 @@ import java.util.EnumSet;
 import java.util.Optional;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.Range;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.AccessSpecifier;
 import com.github.javaparser.ast.NodeList;
-import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.visitor.VoidVisitor;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
@@ -61,25 +62,37 @@ public class Analyzer {
      	 for(int i = 0 ; i < requiredMethods.size() ; i++)
      	 {
      		JSONObject requiredMethod = (JSONObject) requiredMethods.get(i);
-     		Optional<CompilationUnit> classCu = checkMethodSignature(cu,requiredMethod);
-     		if ( classCu.isPresent() ) {
+     		MethodDeclaration methodDeclaration = checkMethodSignature(cu,requiredMethod);
+     		if ( methodDeclaration != null ) {
      			// test further
      			JSONArray requiredAMods = (JSONArray) requiredMethod.get("accessModifiers");
      			int counter = 0;
      			for(int j = 0; j < requiredAMods.size() ; j++){
      	     		JSONObject requiredAMod = (JSONObject) requiredAMods.get(j);
-     	     		if (checkMethodAccessModifier (classCu.get(), requiredAMod)) {
+     	     		if (checkMethodAccessModifier (methodDeclaration, requiredAMod)) {
      	     			counter ++;
      	     		}
      	     	}
      			if (counter == requiredAMods.size() ){
      				JSONArray requiredMods = (JSONArray) requiredMethod.get("modifiers");
-         			for(int j = 0 ; j < requiredMods.size() ; j++){
+     				counter = 0;
+     				for(int j = 0 ; j < requiredMods.size() ; j++){
          	     		JSONObject requiredMod = (JSONObject) requiredMods.get(j);
-         	     		if (checkMethodOtherModifier (classCu.get(), requiredMod)) {
-         	     			
+         	     		if (checkMethodOtherModifier (methodDeclaration, requiredMod)) {
+         	     			counter ++;
          	     		}
          	     	}
+     				if (counter == requiredMods.size() ){
+         				JSONArray annotations = (JSONArray) requiredMethod.get("annotations");
+         				counter = 0;
+         				for(int j = 0 ; j < annotations.size() ; j++){
+             	     		JSONObject annotation = (JSONObject) annotations.get(j);
+             	     		if (checkMethodAnnotation (methodDeclaration, annotation)) {
+             	     			counter ++;
+             	     		}
+             	     	}
+         				//
+         			}
      			}
      			
      			
@@ -87,55 +100,60 @@ public class Analyzer {
      	 }
    }
 	
-	private static Optional<CompilationUnit> checkMethodSignature (CompilationUnit cu, JSONObject requiredMethod) {
-		Optional<CompilationUnit> classCu = checkMethodName ( cu, requiredMethod.get("name").toString() );
- 		if (classCu.isPresent()) {
- 			if (checkMethodReturnType ( classCu.get(), requiredMethod.get("return").toString())) {
- 				if (checkMethodParameters ( classCu.get(), (JSONArray) requiredMethod.get("parameters") )) {
- 					return classCu;
+	private static MethodDeclaration checkMethodSignature (CompilationUnit cu, JSONObject requiredMethod) {
+		MethodDeclaration methodDeclaration = checkMethodName ( cu, requiredMethod.get("name").toString() );
+		if (methodDeclaration != null) {
+ 			if (checkMethodReturnType ( methodDeclaration, requiredMethod.get("return").toString())) {
+ 				if (checkMethodParameters ( methodDeclaration, (JSONArray) requiredMethod.get("parameters") )) {
+ 					return methodDeclaration;
  				}else{
- 					return Optional.empty();
+ 					return null;
  				}
  			}else{
-				return Optional.empty();
+				return null;
 			}
  		}else{
-			return Optional.empty();
+			return null;
  		}
 	}
    
-	private static Optional<CompilationUnit> checkMethodName (CompilationUnit cu, String requiredName) {
+	private static MethodDeclaration checkMethodName (CompilationUnit cu, String requiredName) {
   	 
 		JSONObject required = new JSONObject ();
-		required.put("name", requiredName );
+		required.put( "name", requiredName );
 		VoidVisitor<JSONObject> methodNameTester = new MethodNameTester ();
 		methodNameTester.visit(cu, required); 
 		displayResult(required);
-		Optional<CompilationUnit> optionalCu = (Optional<CompilationUnit>) required.get("cu");
-		return optionalCu;
-   }
+		
+		try {
+			MethodDeclaration Md = (MethodDeclaration) required.get("md");
+			return Md;
+		} catch (Exception exception) {
+			return null;
+		}
+	}
    
-	private static Boolean checkMethodReturnType (CompilationUnit cu, String requiredReturnType) {
+	private static Boolean checkMethodReturnType (MethodDeclaration md, String requiredReturnType) {
      	 
 		JSONObject required = new JSONObject ();
 		required.put("returnType", requiredReturnType );
 		VoidVisitor<JSONObject> methodReturnTypeTester = new MethodReturnTypeTester ();
-		methodReturnTypeTester.visit(cu, required); 
+		methodReturnTypeTester.visit(md, required); 
 		displayResult(required);
 		return (Boolean) required.get("success");
    }
    
-	private static Boolean checkMethodParameters (CompilationUnit cu, JSONArray requiredParametersArray) {
+	private static Boolean checkMethodParameters (MethodDeclaration md, JSONArray requiredParametersArray) {
    	 
-   	JSONObject requiredParameters = new JSONObject ();
-   	requiredParameters.put("parameters", requiredParametersArray );
-   	VoidVisitor<JSONObject> methodParametersTester = new MethodParametersTester ();
-   	methodParametersTester.visit(cu, requiredParameters); 
-   	displayResult(requiredParameters);
-   	return (Boolean) requiredParameters.get("success");
+		JSONObject requiredParameters = new JSONObject ();
+		requiredParameters.put("parameters", requiredParametersArray );
+		VoidVisitor<JSONObject> methodParametersTester = new MethodParametersTester ();
+		methodParametersTester.visit(md, requiredParameters); 
+		displayResult(requiredParameters);
+		return (Boolean) requiredParameters.get("success");
 	}
 	
-	private static Boolean checkMethodAccessModifier (CompilationUnit cu, JSONObject requiredAccessModifier ) {
+	private static Boolean checkMethodAccessModifier (MethodDeclaration md, JSONObject requiredAccessModifier ) {
 	   	 
 	   	JSONObject required = new JSONObject ();
 	   	String requiredModifierName = requiredAccessModifier.get("name").toString();
@@ -148,12 +166,12 @@ public class Analyzer {
 	   	required.put("requiredModifierName", requiredModifierName );
 	   	required.put("requirement", requirement);
 	   	VoidVisitor<JSONObject> methodAccessModifierTester = new MethodAccessModifierTester ();
-	   	methodAccessModifierTester.visit(cu, required); 
+	   	methodAccessModifierTester.visit(md, required); 
 	   	displayResult(required);
 	   	return (Boolean) required.get("success");
 	}
    
-	private static Boolean checkMethodOtherModifier (CompilationUnit cu, JSONObject requiredModifier ) {
+	private static Boolean checkMethodOtherModifier (MethodDeclaration md, JSONObject requiredModifier ) {
 	   	 
 	   	JSONObject required = new JSONObject ();
 	   	String requiredModifierName = requiredModifier.get("name").toString();
@@ -166,7 +184,25 @@ public class Analyzer {
 	   	required.put("requiredModifierName", requiredModifierName );
 	   	required.put("requirement", requirement);
 	   	VoidVisitor<JSONObject> methodOtherModifierTester = new MethodOtherModifierTester ();
-	   	methodOtherModifierTester.visit(cu, required); 
+	   	methodOtherModifierTester.visit(md, required); 
+	   	displayResult(required);
+	   	return (Boolean) required.get("success");
+	}
+	
+	private static Boolean checkMethodAnnotation (MethodDeclaration md, JSONObject requiredAnnotation ) {
+	   	 
+	   	JSONObject required = new JSONObject ();
+	   	String requiredAnnotationName = requiredAnnotation.get("name").toString();
+	   	Boolean requirement = true;
+	   	if(requiredAnnotation.containsKey("forbidden") ){
+	   		if ( (Boolean) requiredAnnotation.get("forbidden") ) {
+	   			requirement = false;
+	   		}
+	   	}
+	   	required.put("requiredAnnotationName", requiredAnnotationName );
+	   	required.put("requirement", requirement);
+	   	VoidVisitor<JSONObject> methodAnnotationsTester = new MethodAnnotationsTester ();
+	   	methodAnnotationsTester.visit(md, required); 
 	   	displayResult(required);
 	   	return (Boolean) required.get("success");
 	}
@@ -198,13 +234,13 @@ public class Analyzer {
            		jobject.put("success", true);
               	jobject.put("errorCode", 0);
               	jobject.put("range", md.getRange().get());
-              	jobject.put("cu", md.findCompilationUnit() );
+              	jobject.put("md", md );
            }
            else {
            	jobject.put("success", false);
            	jobject.put("errorCode", 210);
            	jobject.put("range", md.getRange().get());
-           	jobject.put("cu", Optional.empty() );
+           	jobject.put("md", null );
            }
        }
    }
@@ -228,7 +264,7 @@ public class Analyzer {
            }
            else {
            	jobject.put("success", false);
-           	jobject.put("errorCode", 210);
+           	jobject.put("errorCode", 220);
            	jobject.put("range", md.getRange().get());
            }
        }
@@ -293,7 +329,7 @@ public class Analyzer {
            }
            else {
            	jobject.put("success", false);
-           	jobject.put("errorCode", 210);
+           	jobject.put("errorCode", 240);
            	jobject.put("range", md.getRange().get());
            	jobject.put("cu", Optional.empty() );
            }
@@ -310,8 +346,6 @@ public class Analyzer {
            }
            
            EnumSet<Modifier> modifiers = md.getModifiers();
-           AccessSpecifier accessSpecifier = Modifier.getAccessSpecifier(modifiers);
-           String accessSpecifierString = accessSpecifier.asString();
            Boolean requirement = (Boolean) jobject.get("requirement");
            String reqdSpecifier = jobject.get("requiredModifierName").toString();
            Boolean modifierFound = false;
@@ -329,7 +363,43 @@ public class Analyzer {
            }
            else {
            		jobject.put("success", false);
-           		jobject.put("errorCode", 210);
+           		jobject.put("errorCode", 250);
+           		jobject.put("range", md.getRange().get());
+           		jobject.put("cu", Optional.empty() );
+           }
+       }
+   }
+   
+   private static class MethodAnnotationsTester extends VoidVisitorAdapter<JSONObject> {
+
+       @Override
+       public void visit(MethodDeclaration md, JSONObject jobject) { 
+           super.visit(md, jobject);
+           if ( jobject.containsKey("success") && (Boolean) jobject.get("success")) {
+        	   return;
+           }
+           
+           NodeList<AnnotationExpr> annotationExprs = md.getAnnotations();
+
+           Boolean requirement = (Boolean) jobject.get("requirement");
+           String reqdAnnotation = jobject.get("requiredAnnotationName").toString();
+           Boolean annotationFound = false;
+           
+           for ( AnnotationExpr annotationExpr : annotationExprs ) {
+        	   if ( annotationExpr.getNameAsString().equalsIgnoreCase(reqdAnnotation) ) {
+        		   annotationFound = true;
+        		   break;
+        	   }
+           }
+           
+           if ( annotationFound == requirement) {
+           		jobject.put("success", true);
+              	jobject.put("errorCode", 0);
+              	jobject.put("range", md.getRange().get());
+           }
+           else {
+           		jobject.put("success", false);
+           		jobject.put("errorCode", 260);
            		jobject.put("range", md.getRange().get());
            		jobject.put("cu", Optional.empty() );
            }

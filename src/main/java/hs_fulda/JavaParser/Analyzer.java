@@ -3,6 +3,8 @@ package hs_fulda.JavaParser;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -25,25 +27,28 @@ public class Analyzer {
 		JSONObject config = Analyzer.parseConfigFile(configFilePath);
 		FileInputStream fileInputStream = getFileInputStream(javaFilePath);
 		CompilationUnit cu = JavaParser.parse(fileInputStream);
-		printAST(cu);
 		JavaCodeAnalyze(cu,config);
+		//boolean success = JavaCodeAnalyze(cu, config);
+		//System.out.println("Test Program Success: " + success);
+
+
 		
 	}
 	
 	@SuppressWarnings("unchecked")
 	private static boolean JavaCodeAnalyze(CompilationUnit cu, JSONObject config) {
 		String req_ClassName = config.get("name").toString();
-		System.out.println("Required Class: " + req_ClassName);
-		
-		
+		//System.out.println("Required Class: " + req_ClassName);
+		int status = 0;
+		List<Integer> currentStatus = new ArrayList<Integer>();
 		Stream<ClassOrInterfaceDeclaration> stream_Class = getFilteredClassStream(cu, req_ClassName);
 
 		if (checkForClass(stream_Class)) {
 			stream_Class = getFilteredClassStream(cu, req_ClassName);
 			ClassOrInterfaceDeclaration classNode = stream_Class.findFirst().get();
-			System.out.println("Found Class: " + classNode.getNameAsString());
+			//System.out.println("Found Class: " + classNode.getNameAsString());
 			
-			//Check Class Access Modifier		
+			//Check Class Access Modifier
 			JSONArray requiredConstructs = (JSONArray) config.get("accessModifier");
 			for (Object requiredConstruct : requiredConstructs) {
 				JSONObject req_Construct = (JSONObject) requiredConstruct;
@@ -53,31 +58,33 @@ public class Analyzer {
 				
 				//Checking if Modifier is Allowed or Forbidden	
 				if(isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("false")) {
-					System.out.println("Required Access Modifier: " + req_ConstructName);
-					System.out.println("Found Required Access Modifier: "+ req_ConstructName);
-					
+					//System.out.println("Required Access Modifier: " + req_ConstructName);
+					//System.out.println("Found Required Access Modifier: "+ req_ConstructName);
+					status = 1;
 				} else if(isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("true")) {
 					System.out.println("Found Forbidden Access Modifier: "+req_ConstructName);
+					status = 2;
 				} 
+				currentStatus.add(status);
 			}
 			
-/*			//Checking Class Modifier
-			JSONArray neededConstructs = (JSONArray) config.get("modifier");
+			//Checking Class Modifier
+/*			JSONArray neededConstructs = (JSONArray) config.get("modifier");
 			for (Object neededConstruct : neededConstructs) {
 				JSONObject req_Construct = (JSONObject) neededConstruct;
 				String req_ConstructName = req_Construct.get("name").toString();
-				String req_ConstructRule = req_Construct.get("forbidden").toString();
+				String req_ConstructRule = req_Construct.getOrDefault("forbidden", false).toString();
 				
 				String compare = classNode.getModifiers().toString().toLowerCase();
 				
 				if(isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("false")) {
-					System.out.println("Required Modifier: " + req_ConstructName);
-					System.out.println("Found Required Modifier: "+req_ConstructName);
+//					System.out.println("Required Modifier: " + req_ConstructName);
+//					System.out.println("Found Required Modifier: "+req_ConstructName);
 					
 				} else if(isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("true")) {
 					System.out.println("Found Forbidden Modifier: "+req_ConstructName);
 				} 
-	 
+
 			}*/
 			
 			//Checking for Super Class
@@ -91,28 +98,33 @@ public class Analyzer {
 				String compSuper = classNode.getExtendedTypes().toString();
 				
 				if(isContain(compSuper, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("false")) {
-					System.out.println("Required Parent Class: " + req_ConstructName);
-					System.out.println("Found Required Parent Class: "+req_ConstructName);
-					break;
+//					System.out.println("Required Parent Class: " + req_ConstructName);
+//					System.out.println("Found Required Parent Class: "+req_ConstructName);
+//					break;
+					status = 1;
 				} else if(isContain(compSuper, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("true")) {
 					System.out.println("Found Forbidden Parent Class: "+ req_ConstructName);
 					printLine(classNode);
+					status = 2;
 					break;
 				} else if(classNode.getExtendedTypes().isEmpty()) {
 					System.out.println("No Parent Class Extended");
 					printLine(classNode);
+					status = 2;
 					break;
 				}else if(isContain(compSuper, req_ConstructName) == false && req_ConstructRule.equalsIgnoreCase("false")) {
 					System.out.println("Required Parent Class not Extended: "+ req_ConstructName);
 					printLine(classNode);
+					status = 2;
 					
 				}
-				else if(isContain(compSuper, req_ConstructName) == false) {
-					System.out.println("Extended an unspecified Parent Class");
-					printLine(classNode);
-					break;
-				}
-				
+//				else if(isContain(compSuper, req_ConstructName) == false && req_ConstructRule.equalsIgnoreCase("false")) {
+//					System.out.println("Extended an unspecified Parent Class");
+//					printLine(classNode);
+//					status = 2;
+//					break;
+//				}
+				currentStatus.add(status);
 			}
 			
 			//Checking for Interface
@@ -127,27 +139,39 @@ public class Analyzer {
 				
 				//Checking Interface
 				if(isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("false")) {
-					System.out.println("Required Interface: " + req_ConstructName);
-					System.out.println("Found Required Interface: "+req_ConstructName);
-					
+//					System.out.println("Required Interface: " + req_ConstructName);
+//					System.out.println("Found Required Interface: "+req_ConstructName);
+					status = 1;
 				} else if(isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("true")) {
 					System.out.println("Found Forbidden Interface: "+ req_ConstructName);
 					printLine(classNode);
+					status = 2;
 				}else if(classNode.getImplementedTypes().isEmpty()) {
 					System.out.println("No Interface Implemented");
 					printLine(classNode);
+					status = 2;
 					break;
 				}else if(isContain(compare, req_ConstructName) == false && req_ConstructRule.equalsIgnoreCase("false")) {
 					System.out.println("Required Interface not Implemented: "+ req_ConstructName);
 					printLine(classNode);
-				}else if(isContain(compare, req_ConstructName) == false && req_ConstructRule.equalsIgnoreCase("false")) {
-					System.out.println("Implemented an unspecified Interface");
-					printLine(classNode);
-					break;
+					status = 2;
 				}
+//				else if(isContain(compare, req_ConstructName) == false && req_ConstructRule.equalsIgnoreCase("false")) {
+//					System.out.println("Implemented an unspecified Interface");
+//					printLine(classNode);
+//					status = 1;
+//					break;
+//				}
+				currentStatus.add(status);
 				
 			}
 
+				if (currentStatus.contains(2)) {
+					System.out.println("Test Status: Failed");
+				}else {
+					System.out.println("Test Status: Successful");
+				}
+			
 		}
 		return false;	
 	}
@@ -167,7 +191,7 @@ public class Analyzer {
 		JSONParser parser = new JSONParser();
 		try {
 			JSONObject config = (JSONObject) parser.parse(new FileReader(configFilePath));
-			System.out.println(config.get("requiredClass").toString());
+			//System.out.println(config.get("requiredClass").toString());
 			return (JSONObject) config.get("requiredClass");
 		} catch (IndexOutOfBoundsException indexOutOfBoundsException) {
 			System.out.println("No config file was provided.");

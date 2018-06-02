@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.EnumSet;
 import java.util.Optional;
+
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.MethodDeclaration;
@@ -12,7 +13,11 @@ import com.github.javaparser.Range;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.AccessSpecifier;
 import com.github.javaparser.ast.NodeList;
+import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.expr.AnnotationExpr;
+import com.github.javaparser.ast.expr.MethodCallExpr;
+import com.github.javaparser.ast.stmt.BlockStmt;
+import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.visitor.VoidVisitor;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
@@ -26,7 +31,7 @@ public class Analyzer {
 		JSONObject config = Analyzer.parseConfigFile(configFilePath);
 		FileInputStream fileInputStream = getFileInputStream(javaFilePath);
 		CompilationUnit cu = JavaParser.parse(fileInputStream);
-		
+		printAST(cu);
 		checkMethods ( cu ,config);
 	}
 
@@ -64,7 +69,6 @@ public class Analyzer {
      		JSONObject requiredMethod = (JSONObject) requiredMethods.get(i);
      		MethodDeclaration methodDeclaration = checkMethodSignature(cu,requiredMethod);
      		if ( methodDeclaration != null ) {
-     			// test further
      			JSONArray requiredAMods = (JSONArray) requiredMethod.get("accessModifiers");
      			int counter = 0;
      			for(int j = 0; j < requiredAMods.size() ; j++){
@@ -91,7 +95,30 @@ public class Analyzer {
              	     			counter ++;
              	     		}
              	     	}
-         				//
+         				if (counter == annotations.size() ){
+         					if ( (Boolean) requiredMethod.get("restrictUserDefinedMethod") ) {
+         						Optional<BlockStmt> codeBlock = methodDeclaration.getBody();
+             					if (codeBlock.isPresent()) {
+             						if (checkUserDefinedMethodCall(codeBlock.get())) {
+             							JSONArray builtInMethods = (JSONArray) requiredMethod.get("builtInMethods");
+             	         				counter = 0;
+             	         				for(int j = 0 ; j < builtInMethods.size() ; j++){
+             	             	     		JSONObject builtInMethod = (JSONObject) builtInMethods.get(j);
+             	             	     		if (checkBuiltInMethodCall (codeBlock.get(), builtInMethod)) {
+             	             	     			counter ++;
+             	             	     		}
+             	             	     	}
+             	         				if (counter == builtInMethods.size() ){
+             	         					JSONArray requiredConstructs = (JSONArray) requiredMethod.get("constructs");
+         	            					if ( checkMethodConstructs (codeBlock.get(),requiredConstructs ) ) {
+         	            						System.out.println("Success");
+         	            					}
+         	            				}
+             						}
+             					}
+         					}
+         					
+         				}
          			}
      			}
      			
@@ -123,6 +150,11 @@ public class Analyzer {
 		required.put( "name", requiredName );
 		VoidVisitor<JSONObject> methodNameTester = new MethodNameTester ();
 		methodNameTester.visit(cu, required); 
+		if ( required.get("success") == null ) {
+			required.put("success", false);
+			required.put("errorCode", 210);
+			required.put("md", null );
+		}
 		displayResult(required);
 		
 		try {
@@ -206,16 +238,103 @@ public class Analyzer {
 	   	displayResult(required);
 	   	return (Boolean) required.get("success");
 	}
+
+	private static Boolean checkUserDefinedMethodCall (BlockStmt codeBlock) {
+	   	 
+	   	JSONObject required = new JSONObject ();
+	   	Boolean requirement = true;
+	   	required.put("userDefined", true);
+	   	required.put("requirement", requirement);
+	   	required.put("success", true);
+	   	required.put("errorCode", 0);
+	   	
+	   	VoidVisitor<JSONObject> methodCallExprTester = new MethodCallExprTester ();
+	   	methodCallExprTester.visit(codeBlock, required); 
+	   	if ( required.get("success") == null ) {
+			required.put("success", false);
+			required.put("errorCode", 272);
+			required.put("md", null );
+		}
+	   	displayResult(required);
+	   	return (Boolean) required.get("success");
+	}
+	
+	private static Boolean checkBuiltInMethodCall (BlockStmt codeBlock, JSONObject requiredMethod ) {
+	   	 
+		JSONObject required = new JSONObject ();
+	   	String requiredMethodName = requiredMethod.get("name").toString();
+	   	Boolean requirement = true;
+	   	if(requiredMethod.containsKey("forbidden") ){
+	   		if ( (Boolean) requiredMethod.get("forbidden") ) {
+	   			requirement = false;
+	   		}
+	   	}
+	   	required.put("userDefined", false);
+	   	required.put("requiredMethodName", requiredMethodName );
+	   	required.put("requirement", requirement);
+	   	
+	   	VoidVisitor<JSONObject> methodCallExprTester = new MethodCallExprTester ();
+	   	methodCallExprTester.visit(codeBlock, required); 
+	   	if ( required.get("success") == null ) {
+			required.put("success", false);
+			required.put("errorCode", 275); // No Methods Called
+			required.put("md", null );
+		}
+	   	displayResult(required);
+	   	return (Boolean) required.get("success");
+	}
+	
+	private static Boolean checkMethodConstructs ( BlockStmt codeBlock, JSONArray requiredConstructs ) {
+		JSONObject required = new JSONObject ();
+		int successCounter = 0;
+		for(int j = 0 ; j < requiredConstructs.size() ; j++) {
+			JSONObject requiredConstruct = (JSONObject) requiredConstructs.get(j);
+	     	String requiredConstructName = requiredConstruct.get("name").toString();
+	     	Long requiredLevel = (long) -1;//(Long) ;
+	     	if( requiredConstruct.containsKey("level") ) {
+		   		requiredLevel = (long) requiredConstruct.get("level");
+		   	}
+		   	Boolean requirement = true;
+		   	if( requiredConstruct.containsKey("forbidden") ) {
+		   		if ( (Boolean) requiredConstruct.get("forbidden") ) {
+		   			requirement = false;
+		   		}
+		   	}
+		   	
+		   	required.put("requiredConstructName", requiredConstructName );
+		   	required.put("requiredLevel", requiredLevel);
+		   	required.put("requirement", requirement);
+
+		   	VoidVisitor<JSONObject> methodConstructTester = new MethodConstructTester ();
+		   	methodConstructTester.visit(codeBlock.asBlockStmt(), required);
+		   	
+		   	if ( required.get("success") == null ) {
+				if ( requirement ) {
+					required.put("success", false);
+					required.put("errorCode", 290);
+				} else {
+					required.put("success", true);
+					required.put("errorCode", 0);
+				}
+			}
+		   	if ( (Boolean) required.get("success") ) {
+		   		successCounter ++;
+		   	}
+		   	displayResult(required);
+	    }
+	   	return (requiredConstructs.size() == successCounter);
+	}
 	
 	private static void displayResult ( JSONObject result) {
-		if ( !(Boolean) result.get("success") ) {
-			System.out.println ("Error: " + result.get("errorCode"));
-		    System.out.println ("Location: " + ((Range) result.get("range")).begin);
-		}
-		else {
-			System.out.println ("OK !");
-		}
-	    
+		if ( !(Boolean) result.get("success") ){
+				System.out.println ("Error: " + result.get("errorCode"));
+				if ((Range) result.get("range") != null)
+			    System.out.println ("Location: " + ((Range) result.get("range")).begin);
+			}
+			else {
+				System.out.println ("OK !");
+			}
+		 
 	}
 	
    // Overriding Visit Methods
@@ -380,11 +499,9 @@ public class Analyzer {
            }
            
            NodeList<AnnotationExpr> annotationExprs = md.getAnnotations();
-
            Boolean requirement = (Boolean) jobject.get("requirement");
            String reqdAnnotation = jobject.get("requiredAnnotationName").toString();
            Boolean annotationFound = false;
-           
            for ( AnnotationExpr annotationExpr : annotationExprs ) {
         	   if ( annotationExpr.getNameAsString().equalsIgnoreCase(reqdAnnotation) ) {
         		   annotationFound = true;
@@ -403,6 +520,100 @@ public class Analyzer {
            		jobject.put("range", md.getRange().get());
            		jobject.put("cu", Optional.empty() );
            }
+       }
+   }
+   
+   private static class MethodCallExprTester extends VoidVisitorAdapter<JSONObject> {
+
+       @Override
+       public void visit (MethodCallExpr methodCallExpr, JSONObject jobject) { 
+           super.visit(methodCallExpr, jobject);
+           
+           if ( (Boolean) jobject.get("userDefined") ) {
+        	   String scope = "";
+        	   if (methodCallExpr.getScope().isPresent()) {
+            	   scope = methodCallExpr.getScope().get().toString();
+               }
+        	   if ( scope.isEmpty() || scope.equals("this") ) { // User Defined
+             		jobject.put("success", false);
+                	jobject.put("errorCode", 270);
+                	jobject.put("range", methodCallExpr.getRange().get());
+        	   }
+        	   return;
+           }
+           else { 	 // Built in 
+        	   
+        	   if ( jobject.containsKey("success") && (Boolean) jobject.get("success")) {
+            	   return;
+               }
+        	   
+        	   Boolean requirement = (Boolean) jobject.get("requirement");
+               String requiredMethodName = jobject.get("requiredMethodName").toString();
+
+               if ( (requiredMethodName.equals(methodCallExpr.getNameAsString())) == requirement) {
+               		jobject.put("success", true);
+                  	jobject.put("errorCode", 0);
+                  	jobject.put("range", methodCallExpr.getRange().get());
+               }
+               else {
+               		jobject.put("success", false);
+               		jobject.put("errorCode", 280);
+               		jobject.put("range", methodCallExpr.getRange().get());
+               		jobject.put("cu", Optional.empty() );
+               }
+        	   
+               
+          }
+
+       }
+   }
+   
+   private static class MethodConstructTester extends VoidVisitorAdapter<JSONObject> {
+
+       @Override
+       public void visit ( BlockStmt blockStatement, JSONObject jobject) { 
+           super.visit(blockStatement, jobject);
+           if ( jobject.containsKey("success") && (Boolean) jobject.get("success")) {
+              	return;
+              }
+           
+           Boolean requirement = (Boolean) jobject.get("requirement");
+           String requiredConstructName = jobject.get("requiredConstructName").toString();
+           Long requiredLevel = (Long) jobject.get("requiredLevel");
+           Boolean constructFound = false;
+           
+           int level = 0;
+           Optional<Node> pn = blockStatement.getParentNode();
+           while( pn.isPresent() && !pn.get().getClass().getSimpleName().toString().equals("MethodDeclaration")){
+        	   pn = pn.get().getParentNode();
+        	   if (pn.get().getClass().getSimpleName().toString().equals("BlockStmt")) {
+        		   level++ ;
+        	   }
+           }
+           if ( requiredLevel == -1) {
+        	   requiredLevel = (long) level;
+           }
+           
+           NodeList nodeList = blockStatement.getStatements();
+           for (Object node : nodeList) {
+        	   String stmtSimpleName = node.getClass().getSimpleName().toString().replaceAll("Stmt", "");
+        	   if ( stmtSimpleName.equalsIgnoreCase(requiredConstructName) && requiredLevel == level ) {
+        		   constructFound = true;
+        		   Statement stmt = (Statement) node;
+        		   jobject.put("range", stmt.getRange().get());
+        	   }
+           }
+           
+           if ( constructFound) {
+        	   if ( constructFound == requirement) {
+             		jobject.put("success", true);
+                	jobject.put("errorCode", 0);
+        	   }
+        	   else {
+             		jobject.put("success", false);
+             		jobject.put("errorCode", 291);
+        	   }
+          }
        }
    }
    

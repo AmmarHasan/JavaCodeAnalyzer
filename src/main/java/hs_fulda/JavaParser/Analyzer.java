@@ -74,39 +74,28 @@ public class Analyzer {
             if (methodDeclaration != null) {
                 checkMethodAccessModifier(methodDeclaration, methodConfig);
                 checkMethodOtherModifier(methodDeclaration, methodConfig);
+                checkMethodAnnotation(methodDeclaration, methodConfig);
                 int counter = 0;
-
-                JSONArray annotations = (JSONArray) methodConfig.get("annotations");
-                counter = 0;
-                for (int j = 0; j < annotations.size(); j++) {
-                    JSONObject annotation = (JSONObject) annotations.get(j);
-                    if (checkMethodAnnotation(methodDeclaration, annotation)) {
-                        counter++;
-                    }
-                }
-                if (counter == annotations.size()) {
-                    if ((Boolean) methodConfig.get("restrictUserDefinedMethod")) {
-                        Optional<BlockStmt> codeBlock = methodDeclaration.getBody();
-                        if (codeBlock.isPresent()) {
-                            if (checkUserDefinedMethodCall(codeBlock.get())) {
-                                JSONArray builtInMethods = (JSONArray) methodConfig.get("builtInMethods");
-                                counter = 0;
-                                for (int j = 0; j < builtInMethods.size(); j++) {
-                                    JSONObject builtInMethod = (JSONObject) builtInMethods.get(j);
-                                    if (checkBuiltInMethodCall(codeBlock.get(), builtInMethod)) {
-                                        counter++;
-                                    }
+                if ((Boolean) methodConfig.get("restrictUserDefinedMethod")) {
+                    Optional<BlockStmt> codeBlock = methodDeclaration.getBody();
+                    if (codeBlock.isPresent()) {
+                        if (checkUserDefinedMethodCall(codeBlock.get())) {
+                            JSONArray builtInMethods = (JSONArray) methodConfig.get("builtInMethods");
+                            counter = 0;
+                            for (int j = 0; j < builtInMethods.size(); j++) {
+                                JSONObject builtInMethod = (JSONObject) builtInMethods.get(j);
+                                if (checkBuiltInMethodCall(codeBlock.get(), builtInMethod)) {
+                                    counter++;
                                 }
-                                if (counter == builtInMethods.size()) {
-                                    JSONArray requiredConstructs = (JSONArray) methodConfig.get("constructs");
-                                    if (checkMethodConstructs(codeBlock.get(), requiredConstructs)) {
-                                        System.out.println("Success");
-                                    }
+                            }
+                            if (counter == builtInMethods.size()) {
+                                JSONArray requiredConstructs = (JSONArray) methodConfig.get("constructs");
+                                if (checkMethodConstructs(codeBlock.get(), requiredConstructs)) {
+                                    System.out.println("Success");
                                 }
                             }
                         }
                     }
-
                 }
 
             }
@@ -208,7 +197,6 @@ public class Analyzer {
         JSONArray modifiersConfig = (JSONArray) methodConfig.get("modifiers");
         for (int j = 0; modifiersConfig != null && j < modifiersConfig.size(); j++) {
             JSONObject modifierConfig = (JSONObject) modifiersConfig.get(j);
-            JSONObject required = new JSONObject();
             if (!modifierConfig.containsKey("name")) {
                 System.out.println("Problem: Objects of `modifiers` array must contain `name` property");
                 continue;
@@ -217,6 +205,7 @@ public class Analyzer {
             if (modifierConfig.containsKey("forbidden") && (Boolean) modifierConfig.get("forbidden")) {
                 forbidden = true;
             }
+            JSONObject required = new JSONObject();
             required.put("modifierName", modifierConfig.get("name").toString());
             required.put("forbidden", forbidden);
             VoidVisitor<JSONObject> methodOtherModifierTester = new MethodOtherModifierTester();
@@ -225,22 +214,25 @@ public class Analyzer {
         }
     }
 
-    private static Boolean checkMethodAnnotation(MethodDeclaration md, JSONObject requiredAnnotation) {
-
-        JSONObject required = new JSONObject();
-        String requiredAnnotationName = requiredAnnotation.get("name").toString();
-        Boolean requirement = true;
-        if (requiredAnnotation.containsKey("forbidden")) {
-            if ((Boolean) requiredAnnotation.get("forbidden")) {
-                requirement = false;
+    private static void checkMethodAnnotation(MethodDeclaration methodDeclaration, JSONObject methodConfig) {
+        JSONArray annotationsConfig = (JSONArray) methodConfig.get("annotations");
+        for (int j = 0; annotationsConfig != null && j < annotationsConfig.size(); j++) {
+            JSONObject annotationConfig = (JSONObject) annotationsConfig.get(j);
+            if (!annotationConfig.containsKey("name")) {
+                System.out.println("Problem: Objects of `annotations` array must contain `name` property");
+                continue;
             }
+            Boolean forbidden = false;
+            if (annotationConfig.containsKey("forbidden") && (Boolean) annotationConfig.get("forbidden")) {
+                forbidden = true;
+            }
+            JSONObject required = new JSONObject();
+            required.put("annotationName", annotationConfig.get("name").toString());
+            required.put("forbidden", forbidden);
+            VoidVisitor<JSONObject> methodAnnotationsTester = new MethodAnnotationsTester();
+            methodAnnotationsTester.visit(methodDeclaration, required);
+            displayResult(required);
         }
-        required.put("requiredAnnotationName", requiredAnnotationName);
-        required.put("requirement", requirement);
-        VoidVisitor<JSONObject> methodAnnotationsTester = new MethodAnnotationsTester();
-        methodAnnotationsTester.visit(md, required);
-        displayResult(required);
-        return (Boolean) required.get("success");
     }
 
     private static Boolean checkUserDefinedMethodCall(BlockStmt codeBlock) {
@@ -514,25 +506,30 @@ public class Analyzer {
             }
 
             NodeList<AnnotationExpr> annotationExprs = md.getAnnotations();
-            Boolean requirement = (Boolean) jobject.get("requirement");
-            String reqdAnnotation = jobject.get("requiredAnnotationName").toString();
+            Boolean forbidden = (Boolean) jobject.get("forbidden");
+            String annotationExpected = jobject.get("annotationName").toString();
             Boolean annotationFound = false;
             for (AnnotationExpr annotationExpr : annotationExprs) {
-                if (annotationExpr.getNameAsString().equalsIgnoreCase(reqdAnnotation)) {
+                if (annotationExpr.getNameAsString().equalsIgnoreCase(annotationExpected)) {
                     annotationFound = true;
                     break;
                 }
             }
 
-            if (annotationFound == requirement) {
+            if ((annotationFound && !forbidden) || (!annotationFound && forbidden)) {
                 jobject.put("success", true);
-                jobject.put("errorCode", 0);
-                jobject.put("range", md.getRange().get());
-            } else {
+            } else if (annotationFound && forbidden) {
                 jobject.put("success", false);
                 jobject.put("errorCode", 260);
-                jobject.put("range", md.getRange().get());
-                jobject.put("cu", Optional.empty());
+                System.out.println("Forbidden annotation `" + annotationExpected + "` is present");
+                // problems.add(new Problem("Forbidden annotation `" + annotationExpected + "` is
+                // present", md.getRange().get()));
+            } else {
+                jobject.put("success", false);
+                jobject.put("errorCode", 261);
+                System.out.println("Required annotation `" + annotationExpected + "` is not present");
+                // problems.add(new Problem("Required annotation `" + annotationExpected + "` is not
+                // present", md.getRange().get()));
             }
         }
     }

@@ -66,59 +66,53 @@ public class Analyzer {
 
         JSONArray requiredMethodsConfig = (JSONArray) config.get("requiredMethods");
         for (int i = 0; requiredMethodsConfig != null && i < requiredMethodsConfig.size(); i++) {
+            // Each object inside `requiredMethods` array
             JSONObject methodConfig = (JSONObject) requiredMethodsConfig.get(i);
             MethodDeclaration methodDeclaration = checkMethodSignature(cu, methodConfig);
             if (methodDeclaration != null) {
-                JSONArray requiredAMods = (JSONArray) methodConfig.get("accessModifiers");
+                checkMethodAccessModifier(methodDeclaration, methodConfig);
                 int counter = 0;
-                for (int j = 0; j < requiredAMods.size(); j++) {
-                    JSONObject requiredAMod = (JSONObject) requiredAMods.get(j);
-                    if (checkMethodAccessModifier(methodDeclaration, requiredAMod)) {
+
+                JSONArray requiredMods = (JSONArray) methodConfig.get("modifiers");
+                counter = 0;
+                for (int j = 0; j < requiredMods.size(); j++) {
+                    JSONObject requiredMod = (JSONObject) requiredMods.get(j);
+                    if (checkMethodOtherModifier(methodDeclaration, requiredMod)) {
                         counter++;
                     }
                 }
-                if (counter == requiredAMods.size()) {
-                    JSONArray requiredMods = (JSONArray) methodConfig.get("modifiers");
+                if (counter == requiredMods.size()) {
+                    JSONArray annotations = (JSONArray) methodConfig.get("annotations");
                     counter = 0;
-                    for (int j = 0; j < requiredMods.size(); j++) {
-                        JSONObject requiredMod = (JSONObject) requiredMods.get(j);
-                        if (checkMethodOtherModifier(methodDeclaration, requiredMod)) {
+                    for (int j = 0; j < annotations.size(); j++) {
+                        JSONObject annotation = (JSONObject) annotations.get(j);
+                        if (checkMethodAnnotation(methodDeclaration, annotation)) {
                             counter++;
                         }
                     }
-                    if (counter == requiredMods.size()) {
-                        JSONArray annotations = (JSONArray) methodConfig.get("annotations");
-                        counter = 0;
-                        for (int j = 0; j < annotations.size(); j++) {
-                            JSONObject annotation = (JSONObject) annotations.get(j);
-                            if (checkMethodAnnotation(methodDeclaration, annotation)) {
-                                counter++;
-                            }
-                        }
-                        if (counter == annotations.size()) {
-                            if ((Boolean) methodConfig.get("restrictUserDefinedMethod")) {
-                                Optional<BlockStmt> codeBlock = methodDeclaration.getBody();
-                                if (codeBlock.isPresent()) {
-                                    if (checkUserDefinedMethodCall(codeBlock.get())) {
-                                        JSONArray builtInMethods = (JSONArray) methodConfig.get("builtInMethods");
-                                        counter = 0;
-                                        for (int j = 0; j < builtInMethods.size(); j++) {
-                                            JSONObject builtInMethod = (JSONObject) builtInMethods.get(j);
-                                            if (checkBuiltInMethodCall(codeBlock.get(), builtInMethod)) {
-                                                counter++;
-                                            }
+                    if (counter == annotations.size()) {
+                        if ((Boolean) methodConfig.get("restrictUserDefinedMethod")) {
+                            Optional<BlockStmt> codeBlock = methodDeclaration.getBody();
+                            if (codeBlock.isPresent()) {
+                                if (checkUserDefinedMethodCall(codeBlock.get())) {
+                                    JSONArray builtInMethods = (JSONArray) methodConfig.get("builtInMethods");
+                                    counter = 0;
+                                    for (int j = 0; j < builtInMethods.size(); j++) {
+                                        JSONObject builtInMethod = (JSONObject) builtInMethods.get(j);
+                                        if (checkBuiltInMethodCall(codeBlock.get(), builtInMethod)) {
+                                            counter++;
                                         }
-                                        if (counter == builtInMethods.size()) {
-                                            JSONArray requiredConstructs = (JSONArray) methodConfig.get("constructs");
-                                            if (checkMethodConstructs(codeBlock.get(), requiredConstructs)) {
-                                                System.out.println("Success");
-                                            }
+                                    }
+                                    if (counter == builtInMethods.size()) {
+                                        JSONArray requiredConstructs = (JSONArray) methodConfig.get("constructs");
+                                        if (checkMethodConstructs(codeBlock.get(), requiredConstructs)) {
+                                            System.out.println("Success");
                                         }
                                     }
                                 }
                             }
-
                         }
+
                     }
                 }
 
@@ -190,22 +184,30 @@ public class Analyzer {
         }
     }
 
-    private static Boolean checkMethodAccessModifier(MethodDeclaration md, JSONObject requiredAccessModifier) {
-
-        JSONObject required = new JSONObject();
-        String requiredModifierName = requiredAccessModifier.get("name").toString();
-        Boolean requirement = true;
-        if (requiredAccessModifier.containsKey("forbidden")) {
-            if ((Boolean) requiredAccessModifier.get("forbidden")) {
-                requirement = false;
+    private static void checkMethodAccessModifier(MethodDeclaration methodDeclaration, JSONObject methodConfig) {
+        JSONArray methodAccessModifiersConfig = (JSONArray) methodConfig.get("accessModifiers");
+        // Skip for-loop if `access modifiers` is present or not
+        // int counter = 0;
+        for (int j = 0; methodAccessModifiersConfig != null && j < methodAccessModifiersConfig.size(); j++) {
+            JSONObject requiredAccessModifier = (JSONObject) methodAccessModifiersConfig.get(j);
+            JSONObject required = new JSONObject();
+            String requiredModifierName = requiredAccessModifier.get("name").toString();
+            Boolean requirement = true;
+            if (requiredAccessModifier.containsKey("forbidden")) {
+                if ((Boolean) requiredAccessModifier.get("forbidden")) {
+                    requirement = false;
+                }
             }
+            required.put("requiredModifierName", requiredModifierName);
+            required.put("requirement", requirement);
+            VoidVisitor<JSONObject> methodAccessModifierTester = new MethodAccessModifierTester();
+            methodAccessModifierTester.visit(methodDeclaration, required);
+            displayResult(required);
+            // if ((Boolean) required.get("success")) {
+            //     counter++;
+            // }
         }
-        required.put("requiredModifierName", requiredModifierName);
-        required.put("requirement", requirement);
-        VoidVisitor<JSONObject> methodAccessModifierTester = new MethodAccessModifierTester();
-        methodAccessModifierTester.visit(md, required);
-        displayResult(required);
-        return (Boolean) required.get("success");
+        // return counter == methodAccessModifiersConfig.size();
     }
 
     private static Boolean checkMethodOtherModifier(MethodDeclaration md, JSONObject requiredModifier) {

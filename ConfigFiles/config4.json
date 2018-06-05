@@ -8,13 +8,13 @@
           { "name": "public" },
           { "name": "private", "forbidden": true }
         ],
-        "modifiers": [ 
+        "modifiers": [
         	{ "name": "static" } ,
-        	{ "name": "abstract", "forbidden": true } 
+        	{ "name": "abstract", "forbidden": true }
         ],
-        "annotations": [ 
+        "annotations": [
         	{ "name": "override", "forbidden": true } ,
-        	{ "name": "abstract", "forbidden": true } 
+        	{ "name": "abstract", "forbidden": true }
         ],
         "return": "long",
         "parameters": [ "int", "int" ],

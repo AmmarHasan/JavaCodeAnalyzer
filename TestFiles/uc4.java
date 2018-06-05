@@ -18,14 +18,14 @@ public class DemoMath {
 
 // Problems: static modifier, function signature, using forbidden operator, not using required construct
 // public class DemoMath {
-//     int mutliply(int a, double b) {
+//     public int mutliply(int a, double b) {
 //       return a*b;
 //     }
 // }
 
 // Problems: using forbidden builtin method
 // public class DemoMath {
-//     static long mutliply(int a, int b) {
+//     public static long mutliply(int a, int b) {
 //       for (int i=0; i < 2; i++) {}
 //       return Math.multiplyFull(a, b);
 //     }
@@ -33,7 +33,7 @@ public class DemoMath {
 
 // Problems: implementing in user defined method
 // public class DemoMath {
-//     static long mutliply(int a, int b) {
+//     public static long mutliply(int a, int b) {
 //       for (int i=0; i < 2; i++) {}
 //       return MyMultiply(a, b);
 //     }

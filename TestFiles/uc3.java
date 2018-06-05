@@ -1,11 +1,13 @@
 
 // Use Case 3 : Class with specific Parent class and implementing specific Interfaces
 
-public class StudentAdvisor extends Teacher implements IAdvisor, IExample {
+public class check{
+protected static class StudentAdvisor extends Teacher implements IAdvisor, IExample {
     public advise() {
         System.out.print("Advise students");
     }
 } 
+}
 
 /* Following examples will result in error */
 

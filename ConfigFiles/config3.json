@@ -5,6 +5,13 @@
       { "name": "public" },
       { "name": "private", "forbidden": true }
     ],
+    "modifier": [
+      {
+        "name": "abstract" },
+      {
+        "name": "static", "forbidden": true
+      }
+    ],
     "parentClass": [
       { "name": "Teacher" },
       { "name": "Staff", "forbidden": true }

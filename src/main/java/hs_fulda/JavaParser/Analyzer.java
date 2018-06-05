@@ -58,34 +58,45 @@ public class Analyzer {
 				
 				//Checking if Modifier is Allowed or Forbidden	
 				if(isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("false")) {
-					//System.out.println("Required Access Modifier: " + req_ConstructName);
-					//System.out.println("Found Required Access Modifier: "+ req_ConstructName);
+
 					status = 1;
 				} else if(isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("true")) {
 					System.out.println("Found Forbidden Access Modifier: "+req_ConstructName);
 					status = 2;
-				} 
+				} else if(isContain(compare, req_ConstructName) == false && req_ConstructRule.equalsIgnoreCase("false")) {
+					System.out.println("Required Access Modifier not Found: "+ req_ConstructName);
+					printLine(classNode);
+					status = 2;
+					
+				}
 				currentStatus.add(status);
 			}
 			
 			//Checking Class Modifier
-/*			JSONArray neededConstructs = (JSONArray) config.get("modifier");
+			JSONArray neededConstructs = (JSONArray) config.get("modifier");
 			for (Object neededConstruct : neededConstructs) {
 				JSONObject req_Construct = (JSONObject) neededConstruct;
 				String req_ConstructName = req_Construct.get("name").toString();
 				String req_ConstructRule = req_Construct.getOrDefault("forbidden", false).toString();
 				
 				String compare = classNode.getModifiers().toString().toLowerCase();
-				
+
 				if(isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("false")) {
-//					System.out.println("Required Modifier: " + req_ConstructName);
-//					System.out.println("Found Required Modifier: "+req_ConstructName);
+					System.out.println("Required Modifier: " + req_ConstructName);
+					System.out.println("Found Required Modifier: "+req_ConstructName);
 					
 				} else if(isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("true")) {
 					System.out.println("Found Forbidden Modifier: "+req_ConstructName);
-				} 
-
-			}*/
+					printLine(classNode);
+					status = 2;
+				} else if(isContain(compare, req_ConstructName) == false && req_ConstructRule.equalsIgnoreCase("false")) {
+					System.out.println("Required Modifier not Found: "+ req_ConstructName);
+					printLine(classNode);
+					status = 2;
+					
+				}
+				currentStatus.add(status);
+			}
 			
 			//Checking for Super Class
 			JSONArray req_SuperClass = (JSONArray) config.get("parentClass");
@@ -172,6 +183,8 @@ public class Analyzer {
 					System.out.println("Test Status: Successful");
 				}
 			
+		}else {
+			System.out.println("The required class was not found");
 		}
 		return false;	
 	}

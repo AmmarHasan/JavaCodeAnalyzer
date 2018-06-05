@@ -64,12 +64,12 @@ public class Analyzer {
 
     private static void checkMethods(CompilationUnit cu, JSONObject config) {
 
-        JSONArray requiredMethods = (JSONArray) config.get("requiredMethods");
-        for (int i = 0; requiredMethods != null && i < requiredMethods.size(); i++) {
-            JSONObject requiredMethod = (JSONObject) requiredMethods.get(i);
-            MethodDeclaration methodDeclaration = checkMethodSignature(cu, requiredMethod);
+        JSONArray requiredMethodsConfig = (JSONArray) config.get("requiredMethods");
+        for (int i = 0; requiredMethodsConfig != null && i < requiredMethodsConfig.size(); i++) {
+            JSONObject methodConfig = (JSONObject) requiredMethodsConfig.get(i);
+            MethodDeclaration methodDeclaration = checkMethodSignature(cu, methodConfig);
             if (methodDeclaration != null) {
-                JSONArray requiredAMods = (JSONArray) requiredMethod.get("accessModifiers");
+                JSONArray requiredAMods = (JSONArray) methodConfig.get("accessModifiers");
                 int counter = 0;
                 for (int j = 0; j < requiredAMods.size(); j++) {
                     JSONObject requiredAMod = (JSONObject) requiredAMods.get(j);
@@ -78,7 +78,7 @@ public class Analyzer {
                     }
                 }
                 if (counter == requiredAMods.size()) {
-                    JSONArray requiredMods = (JSONArray) requiredMethod.get("modifiers");
+                    JSONArray requiredMods = (JSONArray) methodConfig.get("modifiers");
                     counter = 0;
                     for (int j = 0; j < requiredMods.size(); j++) {
                         JSONObject requiredMod = (JSONObject) requiredMods.get(j);
@@ -87,7 +87,7 @@ public class Analyzer {
                         }
                     }
                     if (counter == requiredMods.size()) {
-                        JSONArray annotations = (JSONArray) requiredMethod.get("annotations");
+                        JSONArray annotations = (JSONArray) methodConfig.get("annotations");
                         counter = 0;
                         for (int j = 0; j < annotations.size(); j++) {
                             JSONObject annotation = (JSONObject) annotations.get(j);
@@ -96,11 +96,11 @@ public class Analyzer {
                             }
                         }
                         if (counter == annotations.size()) {
-                            if ((Boolean) requiredMethod.get("restrictUserDefinedMethod")) {
+                            if ((Boolean) methodConfig.get("restrictUserDefinedMethod")) {
                                 Optional<BlockStmt> codeBlock = methodDeclaration.getBody();
                                 if (codeBlock.isPresent()) {
                                     if (checkUserDefinedMethodCall(codeBlock.get())) {
-                                        JSONArray builtInMethods = (JSONArray) requiredMethod.get("builtInMethods");
+                                        JSONArray builtInMethods = (JSONArray) methodConfig.get("builtInMethods");
                                         counter = 0;
                                         for (int j = 0; j < builtInMethods.size(); j++) {
                                             JSONObject builtInMethod = (JSONObject) builtInMethods.get(j);
@@ -109,7 +109,7 @@ public class Analyzer {
                                             }
                                         }
                                         if (counter == builtInMethods.size()) {
-                                            JSONArray requiredConstructs = (JSONArray) requiredMethod.get("constructs");
+                                            JSONArray requiredConstructs = (JSONArray) methodConfig.get("constructs");
                                             if (checkMethodConstructs(codeBlock.get(), requiredConstructs)) {
                                                 System.out.println("Success");
                                             }
@@ -126,30 +126,23 @@ public class Analyzer {
         }
     }
 
-    private static MethodDeclaration checkMethodSignature(CompilationUnit cu, JSONObject requiredMethod) {
-        MethodDeclaration methodDeclaration = checkMethodName(cu, requiredMethod);
-        if (methodDeclaration != null) {
-            if (checkMethodReturnType(methodDeclaration, requiredMethod.get("return").toString())) {
-                if (checkMethodParameters(methodDeclaration, (JSONArray) requiredMethod.get("parameters"))) {
-                    return methodDeclaration;
-                } else {
-                    return null;
-                }
-            } else {
-                return null;
-            }
+    private static MethodDeclaration checkMethodSignature(CompilationUnit cu, JSONObject methodConfig) {
+        MethodDeclaration methodDeclaration = checkMethodName(cu, methodConfig);
+        if (methodDeclaration != null && checkMethodReturnType(methodDeclaration, methodConfig)
+                && checkMethodParameters(methodDeclaration, methodConfig)) {
+            return methodDeclaration;
         } else {
             return null;
         }
     }
 
-    private static MethodDeclaration checkMethodName(CompilationUnit cu, JSONObject requiredMethod) {
-        if (requiredMethod.get("name") == null) {
+    private static MethodDeclaration checkMethodName(CompilationUnit cu, JSONObject methodConfig) {
+        if (methodConfig.get("name") == null) {
             System.out.println("Problem: Objects of `requiredMethods` array must contain `name` property");
             return null;
         } else {
             JSONObject required = new JSONObject();
-            required.put("name", requiredMethod.get("name").toString());
+            required.put("name", methodConfig.get("name").toString());
             VoidVisitor<JSONObject> methodNameTester = new MethodNameTester();
             methodNameTester.visit(cu, required);
             if (required.get("success") == null) {
@@ -167,24 +160,34 @@ public class Analyzer {
         }
     }
 
-    private static Boolean checkMethodReturnType(MethodDeclaration md, String requiredReturnType) {
-
-        JSONObject required = new JSONObject();
-        required.put("returnType", requiredReturnType);
-        VoidVisitor<JSONObject> methodReturnTypeTester = new MethodReturnTypeTester();
-        methodReturnTypeTester.visit(md, required);
-        displayResult(required);
-        return (Boolean) required.get("success");
+    private static Boolean checkMethodReturnType(MethodDeclaration md, JSONObject methodConfig) {
+        String returnTypeConfig = (String) methodConfig.get("return");
+        if (returnTypeConfig == null) {
+            System.out.println("Problem: Objects of `requiredMethods` array must contain `return` property");
+            return false;
+        } else {
+            JSONObject required = new JSONObject();
+            required.put("returnType", returnTypeConfig);
+            VoidVisitor<JSONObject> methodReturnTypeTester = new MethodReturnTypeTester();
+            methodReturnTypeTester.visit(md, required);
+            displayResult(required);
+            return (Boolean) required.get("success");
+        }
     }
 
-    private static Boolean checkMethodParameters(MethodDeclaration md, JSONArray requiredParametersArray) {
-
-        JSONObject requiredParameters = new JSONObject();
-        requiredParameters.put("parameters", requiredParametersArray);
-        VoidVisitor<JSONObject> methodParametersTester = new MethodParametersTester();
-        methodParametersTester.visit(md, requiredParameters);
-        displayResult(requiredParameters);
-        return (Boolean) requiredParameters.get("success");
+    private static Boolean checkMethodParameters(MethodDeclaration md, JSONObject methodConfig) {
+        JSONArray methodParametersConfig = (JSONArray) methodConfig.get("parameters");
+        if (methodParametersConfig == null) {
+            System.out.println("Problem: Objects of `requiredMethods` array must contain `parameters` array");
+            return false;
+        } else {
+            JSONObject requiredParameters = new JSONObject();
+            requiredParameters.put("parameters", methodParametersConfig);
+            VoidVisitor<JSONObject> methodParametersTester = new MethodParametersTester();
+            methodParametersTester.visit(md, requiredParameters);
+            displayResult(requiredParameters);
+            return (Boolean) requiredParameters.get("success");
+        }
     }
 
     private static Boolean checkMethodAccessModifier(MethodDeclaration md, JSONObject requiredAccessModifier) {

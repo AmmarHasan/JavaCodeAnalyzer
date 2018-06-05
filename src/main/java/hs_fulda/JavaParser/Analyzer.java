@@ -4,7 +4,9 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
@@ -71,49 +73,40 @@ public class Analyzer {
             MethodDeclaration methodDeclaration = checkMethodSignature(cu, methodConfig);
             if (methodDeclaration != null) {
                 checkMethodAccessModifier(methodDeclaration, methodConfig);
+                checkMethodOtherModifier(methodDeclaration, methodConfig);
                 int counter = 0;
 
-                JSONArray requiredMods = (JSONArray) methodConfig.get("modifiers");
+                JSONArray annotations = (JSONArray) methodConfig.get("annotations");
                 counter = 0;
-                for (int j = 0; j < requiredMods.size(); j++) {
-                    JSONObject requiredMod = (JSONObject) requiredMods.get(j);
-                    if (checkMethodOtherModifier(methodDeclaration, requiredMod)) {
+                for (int j = 0; j < annotations.size(); j++) {
+                    JSONObject annotation = (JSONObject) annotations.get(j);
+                    if (checkMethodAnnotation(methodDeclaration, annotation)) {
                         counter++;
                     }
                 }
-                if (counter == requiredMods.size()) {
-                    JSONArray annotations = (JSONArray) methodConfig.get("annotations");
-                    counter = 0;
-                    for (int j = 0; j < annotations.size(); j++) {
-                        JSONObject annotation = (JSONObject) annotations.get(j);
-                        if (checkMethodAnnotation(methodDeclaration, annotation)) {
-                            counter++;
-                        }
-                    }
-                    if (counter == annotations.size()) {
-                        if ((Boolean) methodConfig.get("restrictUserDefinedMethod")) {
-                            Optional<BlockStmt> codeBlock = methodDeclaration.getBody();
-                            if (codeBlock.isPresent()) {
-                                if (checkUserDefinedMethodCall(codeBlock.get())) {
-                                    JSONArray builtInMethods = (JSONArray) methodConfig.get("builtInMethods");
-                                    counter = 0;
-                                    for (int j = 0; j < builtInMethods.size(); j++) {
-                                        JSONObject builtInMethod = (JSONObject) builtInMethods.get(j);
-                                        if (checkBuiltInMethodCall(codeBlock.get(), builtInMethod)) {
-                                            counter++;
-                                        }
+                if (counter == annotations.size()) {
+                    if ((Boolean) methodConfig.get("restrictUserDefinedMethod")) {
+                        Optional<BlockStmt> codeBlock = methodDeclaration.getBody();
+                        if (codeBlock.isPresent()) {
+                            if (checkUserDefinedMethodCall(codeBlock.get())) {
+                                JSONArray builtInMethods = (JSONArray) methodConfig.get("builtInMethods");
+                                counter = 0;
+                                for (int j = 0; j < builtInMethods.size(); j++) {
+                                    JSONObject builtInMethod = (JSONObject) builtInMethods.get(j);
+                                    if (checkBuiltInMethodCall(codeBlock.get(), builtInMethod)) {
+                                        counter++;
                                     }
-                                    if (counter == builtInMethods.size()) {
-                                        JSONArray requiredConstructs = (JSONArray) methodConfig.get("constructs");
-                                        if (checkMethodConstructs(codeBlock.get(), requiredConstructs)) {
-                                            System.out.println("Success");
-                                        }
+                                }
+                                if (counter == builtInMethods.size()) {
+                                    JSONArray requiredConstructs = (JSONArray) methodConfig.get("constructs");
+                                    if (checkMethodConstructs(codeBlock.get(), requiredConstructs)) {
+                                        System.out.println("Success");
                                     }
                                 }
                             }
                         }
-
                     }
+
                 }
 
             }
@@ -185,47 +178,51 @@ public class Analyzer {
     }
 
     private static void checkMethodAccessModifier(MethodDeclaration methodDeclaration, JSONObject methodConfig) {
-        JSONArray methodAccessModifiersConfig = (JSONArray) methodConfig.get("accessModifiers");
+        JSONArray accessModifiersConfig = (JSONArray) methodConfig.get("accessModifiers");
         // Skip for-loop if `access modifiers` is present or not
         // int counter = 0;
-        for (int j = 0; methodAccessModifiersConfig != null && j < methodAccessModifiersConfig.size(); j++) {
-            JSONObject requiredAccessModifier = (JSONObject) methodAccessModifiersConfig.get(j);
+        for (int j = 0; accessModifiersConfig != null && j < accessModifiersConfig.size(); j++) {
+            JSONObject accessModifier = (JSONObject) accessModifiersConfig.get(j);
             JSONObject required = new JSONObject();
-            String requiredModifierName = requiredAccessModifier.get("name").toString();
-            Boolean requirement = true;
-            if (requiredAccessModifier.containsKey("forbidden")) {
-                if ((Boolean) requiredAccessModifier.get("forbidden")) {
-                    requirement = false;
-                }
+            if (!accessModifier.containsKey("name")) {
+                System.out.println("Problem: Objects of `accessModifiers` array must contain `name` property");
+                continue;
             }
-            required.put("requiredModifierName", requiredModifierName);
-            required.put("requirement", requirement);
+            Boolean forbidden = false;
+            if (accessModifier.containsKey("forbidden") && (Boolean) accessModifier.get("forbidden")) {
+                forbidden = true;
+            }
+            required.put("accessModifierName", accessModifier.get("name").toString());
+            required.put("forbidden", forbidden);
             VoidVisitor<JSONObject> methodAccessModifierTester = new MethodAccessModifierTester();
             methodAccessModifierTester.visit(methodDeclaration, required);
             displayResult(required);
             // if ((Boolean) required.get("success")) {
-            //     counter++;
+            // counter++;
             // }
         }
-        // return counter == methodAccessModifiersConfig.size();
+        // return counter == accessModifiersConfig.size();
     }
 
-    private static Boolean checkMethodOtherModifier(MethodDeclaration md, JSONObject requiredModifier) {
-
-        JSONObject required = new JSONObject();
-        String requiredModifierName = requiredModifier.get("name").toString();
-        Boolean requirement = true;
-        if (requiredModifier.containsKey("forbidden")) {
-            if ((Boolean) requiredModifier.get("forbidden")) {
-                requirement = false;
+    private static void checkMethodOtherModifier(MethodDeclaration methodDeclaration, JSONObject methodConfig) {
+        JSONArray modifiersConfig = (JSONArray) methodConfig.get("modifiers");
+        for (int j = 0; modifiersConfig != null && j < modifiersConfig.size(); j++) {
+            JSONObject modifierConfig = (JSONObject) modifiersConfig.get(j);
+            JSONObject required = new JSONObject();
+            if (!modifierConfig.containsKey("name")) {
+                System.out.println("Problem: Objects of `modifiers` array must contain `name` property");
+                continue;
             }
+            Boolean forbidden = false;
+            if (modifierConfig.containsKey("forbidden") && (Boolean) modifierConfig.get("forbidden")) {
+                forbidden = true;
+            }
+            required.put("modifierName", modifierConfig.get("name").toString());
+            required.put("forbidden", forbidden);
+            VoidVisitor<JSONObject> methodOtherModifierTester = new MethodOtherModifierTester();
+            methodOtherModifierTester.visit(methodDeclaration, required);
+            displayResult(required);
         }
-        required.put("requiredModifierName", requiredModifierName);
-        required.put("requirement", requirement);
-        VoidVisitor<JSONObject> methodOtherModifierTester = new MethodOtherModifierTester();
-        methodOtherModifierTester.visit(md, required);
-        displayResult(required);
-        return (Boolean) required.get("success");
     }
 
     private static Boolean checkMethodAnnotation(MethodDeclaration md, JSONObject requiredAnnotation) {
@@ -442,18 +439,23 @@ public class Analyzer {
             EnumSet<Modifier> modifiers = md.getModifiers();
             AccessSpecifier accessSpecifier = Modifier.getAccessSpecifier(modifiers);
             String accessSpecifierString = accessSpecifier.asString();
-            Boolean requirement = (Boolean) jobject.get("requirement");
-            String reqdAccessSpecifier = jobject.get("requiredModifierName").toString();
-
-            if (accessSpecifierString.equals(reqdAccessSpecifier) == requirement) {
+            Boolean forbidden = (Boolean) jobject.get("forbidden");
+            String expectedModifier = jobject.get("accessModifierName").toString();
+            Boolean accessModifierFound = accessSpecifierString.equals(expectedModifier);
+            if ((accessModifierFound && !forbidden) || (!accessModifierFound && forbidden)) {
                 jobject.put("success", true);
-                jobject.put("errorCode", 0);
-                jobject.put("range", md.getRange().get());
-            } else {
+            } else if (accessModifierFound && forbidden) {
                 jobject.put("success", false);
                 jobject.put("errorCode", 240);
-                jobject.put("range", md.getRange().get());
-                jobject.put("cu", Optional.empty());
+                System.out.println("Forbidden access modifier `" + expectedModifier + "` is present");
+                // problems.add(new Problem("Forbidden access modifier `" + expectedModifier +
+                // "` is present", md.getRange().get()));
+            } else {
+                jobject.put("success", false);
+                jobject.put("errorCode", 241);
+                System.out.println("Required access modifier `" + expectedModifier + "` is not present");
+                // problems.add(new Problem("Required access modifier `" + expectedModifier + "`
+                // is not present", md.getRange().get()));
             }
         }
     }
@@ -468,25 +470,36 @@ public class Analyzer {
             }
 
             EnumSet<Modifier> modifiers = md.getModifiers();
-            Boolean requirement = (Boolean) jobject.get("requirement");
-            String reqdSpecifier = jobject.get("requiredModifierName").toString();
+            String accessSpecifierString = Modifier.getAccessSpecifier(modifiers).toString();
+
+            List<Modifier> otherModifiers = modifiers.stream()
+                    .filter(modifier -> !modifier.toString().equals(accessSpecifierString))
+                    .collect(Collectors.toList());
+
+            Boolean forbidden = (Boolean) jobject.get("forbidden");
+            String expectedModifier = jobject.get("modifierName").toString();
             Boolean modifierFound = false;
-            for (Modifier modifier : modifiers) {
-                if (modifier.asString().equalsIgnoreCase(reqdSpecifier)) {
+            for (Modifier modifier : otherModifiers) {
+                if (modifier.asString().equalsIgnoreCase(expectedModifier)) {
                     modifierFound = true;
                     break;
                 }
             }
 
-            if (modifierFound == requirement) {
+            if ((modifierFound && !forbidden) || (!modifierFound && forbidden)) {
                 jobject.put("success", true);
-                jobject.put("errorCode", 0);
-                jobject.put("range", md.getRange().get());
-            } else {
+            } else if (modifierFound && forbidden) {
                 jobject.put("success", false);
                 jobject.put("errorCode", 250);
-                jobject.put("range", md.getRange().get());
-                jobject.put("cu", Optional.empty());
+                System.out.println("Forbidden modifier `" + expectedModifier + "` is present");
+                // problems.add(new Problem("Forbidden modifier `" + expectedModifier + "` is
+                // present", md.getRange().get()));
+            } else {
+                jobject.put("success", false);
+                jobject.put("errorCode", 251);
+                System.out.println("Required modifier `" + expectedModifier + "` is not present");
+                // problems.add(new Problem("Required modifier `" + expectedModifier + "` is not
+                // present", md.getRange().get()));
             }
         }
     }
@@ -612,6 +625,7 @@ public class Analyzer {
                 }
             }
         }
+
     }
 
     // private static void putResult ( JSONObject result) {}

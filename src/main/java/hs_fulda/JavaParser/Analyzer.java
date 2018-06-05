@@ -13,10 +13,6 @@ import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.body.MethodDeclaration;
-import com.github.javaparser.ast.body.TypeDeclaration;
-import com.github.javaparser.ast.stmt.ForStmt;
-import com.github.javaparser.ast.stmt.IfStmt;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -27,7 +23,7 @@ public class Analyzer {
 		JSONObject config = Analyzer.parseConfigFile(configFilePath);
 		FileInputStream fileInputStream = getFileInputStream(javaFilePath);
 		CompilationUnit cu = JavaParser.parse(fileInputStream);
-		JavaCodeAnalyze(cu,config);
+		analyzeClass(cu,config);
 		//boolean success = JavaCodeAnalyze(cu, config);
 		//System.out.println("Test Program Success: " + success);
 
@@ -36,7 +32,7 @@ public class Analyzer {
 	}
 	
 	@SuppressWarnings("unchecked")
-	private static boolean JavaCodeAnalyze(CompilationUnit cu, JSONObject config) {
+	private static ClassOrInterfaceDeclaration analyzeClass (CompilationUnit cu, JSONObject config) {
 		String req_ClassName = config.get("name").toString();
 		//System.out.println("Required Class: " + req_ClassName);
 		int status = 0;
@@ -180,14 +176,16 @@ public class Analyzer {
 
 				if (currentStatus.contains(2)) {
 					System.out.println("Test Status: Failed");
+					return null;
 				}else {
 					System.out.println("Test Status: Successful");
+					return classNode;
 				}
 			
 		}else {
 			System.out.println("The required class was not found");
+			return null;
 		}
-		return false;	
 	}
 	
 	private static void printLine(Node node) {
@@ -197,8 +195,10 @@ public class Analyzer {
 	public static void parseJavaCode(String javaCode, String configFilePath) {
 		JSONObject config = Analyzer.parseConfigFile(configFilePath);
 		CompilationUnit cu = JavaParser.parse(javaCode);
-		boolean success = JavaCodeAnalyze(cu, config);
-		System.out.println("Test Program Success: " + success);
+		ClassOrInterfaceDeclaration classDeclaration = analyzeClass (cu, config);
+		if (classDeclaration != null) {
+			//Check Method
+		}
 	}
 
 	private static JSONObject parseConfigFile(String configFilePath) {

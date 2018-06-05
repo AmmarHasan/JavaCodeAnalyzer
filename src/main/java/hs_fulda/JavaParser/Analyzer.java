@@ -82,8 +82,9 @@ public class Analyzer {
 				String compare = classNode.getModifiers().toString().toLowerCase();
 
 				if(isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("false")) {
-					System.out.println("Required Modifier: " + req_ConstructName);
-					System.out.println("Found Required Modifier: "+req_ConstructName);
+//					System.out.println("Required Modifier: " + req_ConstructName);
+//					System.out.println("Found Required Modifier: "+req_ConstructName);
+					status = 1;
 					
 				} else if(isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("true")) {
 					System.out.println("Found Forbidden Modifier: "+req_ConstructName);

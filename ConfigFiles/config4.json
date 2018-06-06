@@ -4,20 +4,25 @@
     "requiredMethods": [
       {
         "name": "multiply",
-        "accessModifier": [
+        "accessModifiers": [
           { "name": "public" },
           { "name": "private", "forbidden": true }
         ],
-        "modifier": [ { "name": "static" } ],
-
+        "modifiers": [
+        	{ "name": "static" } ,
+        	{ "name": "abstract", "forbidden": true }
+        ],
+        "annotations": [
+        	{ "name": "override", "forbidden": true } ,
+        	{ "name": "abstract", "forbidden": true }
+        ],
         "return": "long",
         "parameters": [ "int", "int" ],
-
         "restrictUserDefinedMethod": true,
-        "builtInMethods": [ { "name": "multiplyFull", "forbidden": true } ],
+        "builtInMethods": [ { "name": "multiplyFull", "forbidden": false } ],
 
         "operators": [ { "name": "*", "forbidden": true } ],
-        "constructs": [ { "name": "for" } ]
+        "constructs": [ { "name": "if" , "forbidden": true ,"level" : 0 } ]
       }
     ]
   }

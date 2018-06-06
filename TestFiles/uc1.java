@@ -9,12 +9,12 @@ public class Person {
 
 /* Following examples will result in error */
 
-/* Problem: wrong class name */
-//public class Person2 {
-    // String firstName;
-    // String secondName;
-    // Integer age;
-//} 
+///* Problem: wrong class name */
+////public class Person2 {
+//    // String firstName;
+//    // String secondName;
+//    // Integer age;
+////} 
 
 /* Problem: wrong access modifier */
 //private class Person {

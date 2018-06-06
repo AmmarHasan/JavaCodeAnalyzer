@@ -1,0 +1,22 @@
+{
+	"210": "Method Name Doesn’t Match",
+	
+	"220": "Method Return Type Doesn’t Match",
+	"222": "Method Return Type Not found",
+	
+	"230": "Method Parameters Don’t Match in Number",
+	"231": "Method Parameters Don’t Match in Type",
+	
+	"240": "Method Access Modifier Don’t Match",
+	"241": "Method Access Modifier Don’t Match",
+	
+	"250": "Method Other Modifier Don’t Match",
+	"251": "Method Other Modifier Don’t Match",
+	
+	"260": "Method Annotations Don’t Match ",
+	
+	"270": "Method Doesn't Obey 'restrictUserDefinedMethod' Rule",
+	"275": "Method wasn't called'",
+	"280": "Built in Method Rules dont match"
+	
+}

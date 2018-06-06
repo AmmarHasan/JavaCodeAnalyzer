@@ -25,7 +25,7 @@ public class DemoMath {
 
 // Problems: using forbidden builtin method
 // public class DemoMath {
-//     public static long mutliply(int a, int b) {
+//     public static long multiply(int a, int b) {
 //       for (int i=0; i < 2; i++) {}
 //       return Math.multiplyFull(a, b);
 //     }
@@ -33,7 +33,7 @@ public class DemoMath {
 
 // Problems: implementing in user defined method
 // public class DemoMath {
-//     public static long mutliply(int a, int b) {
+//     public static long multiply(int a, int b) {
 //       for (int i=0; i < 2; i++) {}
 //       return MyMultiply(a, b);
 //     }

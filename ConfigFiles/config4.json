@@ -19,7 +19,7 @@
         "return": "long",
         "parameters": [ "int", "int" ],
         "restrictUserDefinedMethod": true,
-        "builtInMethods": [ { "name": "multiplyFull", "forbidden": false } ],
+        "builtInMethods": [ { "name": "multiplyFull", "forbidden": true } ],
 
         "operators": [ { "name": "*", "forbidden": true } ],
         "constructs": [ { "name": "if" , "forbidden": true ,"level" : 0 } ]

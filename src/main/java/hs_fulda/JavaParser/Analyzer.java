@@ -34,20 +34,30 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 public class Analyzer {
+	
     public static void parseJavaFile(String javaFilePath, String configFilePath) {
         JSONObject config = Analyzer.parseConfigFile(configFilePath);
         FileInputStream fileInputStream = getFileInputStream(javaFilePath);
         CompilationUnit cu = JavaParser.parse(fileInputStream);
-        printAST(cu);
-        analyzeClass(cu, config);
-        checkMethods(cu, config);
-        // boolean success = JavaCodeAnalyze(cu, config);
-        // System.out.println("Test Program Success: " + success);
-
+        //printAST(cu);
+        ClassOrInterfaceDeclaration classDeclaration = analyzeClass(cu, config);
+        if (classDeclaration != null) {
+            // Check Method
+        	checkMethods( classDeclaration, config);
+        }
+    }
+    
+    public static void parseJavaCode(String javaCode, String configFilePath) {
+        JSONObject config = Analyzer.parseConfigFile(configFilePath);
+        CompilationUnit cu = JavaParser.parse(javaCode);
+        ClassOrInterfaceDeclaration classDeclaration = analyzeClass(cu, config);
+        if (classDeclaration != null) {
+            // Check Method
+        }
     }
 
     @SuppressWarnings("unchecked")
-    private static ClassOrInterfaceDeclaration analyzeClass(CompilationUnit cu, JSONObject config) {
+    private static ClassOrInterfaceDeclaration analyzeClass (CompilationUnit cu, JSONObject config) {
         String req_ClassName = config.get("name").toString();
         // System.out.println("Required Class: " + req_ClassName);
         int status = 0;
@@ -61,147 +71,159 @@ public class Analyzer {
 
             // Check Class Access Modifier
             JSONArray requiredConstructs = (JSONArray) config.get("accessModifier");
-            for (Object requiredConstruct : requiredConstructs) {
-                JSONObject req_Construct = (JSONObject) requiredConstruct;
-                String req_ConstructName = req_Construct.get("name").toString();
-                String req_ConstructRule = req_Construct.getOrDefault("forbidden", false).toString();
-                String compare = classNode.getModifiers().toString().toLowerCase();
+            if ( requiredConstructs != null) {
+            	for (Object requiredConstruct : requiredConstructs) {
+                    JSONObject req_Construct = (JSONObject) requiredConstruct;
+                    String req_ConstructName = req_Construct.get("name").toString();
+                    String req_ConstructRule = req_Construct.getOrDefault("forbidden", false).toString();
+                    String compare = classNode.getModifiers().toString().toLowerCase();
 
-                // Checking if Modifier is Allowed or Forbidden
-                if (isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("false")) {
+                    // Checking if Modifier is Allowed or Forbidden
+                    if (isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("false")) {
 
-                    status = 1;
-                } else if (isContain(compare, req_ConstructName) == true
-                        && req_ConstructRule.equalsIgnoreCase("true")) {
-                    System.out.println("Found Forbidden Access Modifier: " + req_ConstructName);
-                    status = 2;
-                } else if (isContain(compare, req_ConstructName) == false
-                        && req_ConstructRule.equalsIgnoreCase("false")) {
-                    System.out.println("Required Access Modifier not Found: " + req_ConstructName);
-                    printLine(classNode);
-                    status = 2;
+                        status = 1;
+                    } else if (isContain(compare, req_ConstructName) == true
+                            && req_ConstructRule.equalsIgnoreCase("true")) {
+                        System.out.println("Found Forbidden Access Modifier: " + req_ConstructName);
+                        status = 2;
+                    } else if (isContain(compare, req_ConstructName) == false
+                            && req_ConstructRule.equalsIgnoreCase("false")) {
+                        System.out.println("Required Access Modifier not Found: " + req_ConstructName);
+                        printLine(classNode);
+                        status = 2;
 
+                    }
+                    currentStatus.add(status);
                 }
-                currentStatus.add(status);
             }
-
+            
             // Checking Class Modifier
             JSONArray neededConstructs = (JSONArray) config.get("modifier");
-            for (Object neededConstruct : neededConstructs) {
-                JSONObject req_Construct = (JSONObject) neededConstruct;
-                String req_ConstructName = req_Construct.get("name").toString();
-                String req_ConstructRule = req_Construct.getOrDefault("forbidden", false).toString();
+            if ( neededConstructs != null) {
+            	for (Object neededConstruct : neededConstructs) {
+                    JSONObject req_Construct = (JSONObject) neededConstruct;
+                    String req_ConstructName = req_Construct.get("name").toString();
+                    String req_ConstructRule = req_Construct.getOrDefault("forbidden", false).toString();
 
-                String compare = classNode.getModifiers().toString().toLowerCase();
+                    String compare = classNode.getModifiers().toString().toLowerCase();
 
-                if (isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("false")) {
-                    // System.out.println("Required Modifier: " + req_ConstructName);
-                    // System.out.println("Found Required Modifier: "+req_ConstructName);
-                    status = 1;
+                    if (isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("false")) {
+                        // System.out.println("Required Modifier: " + req_ConstructName);
+                        // System.out.println("Found Required Modifier: "+req_ConstructName);
+                        status = 1;
 
-                } else if (isContain(compare, req_ConstructName) == true
-                        && req_ConstructRule.equalsIgnoreCase("true")) {
-                    System.out.println("Found Forbidden Modifier: " + req_ConstructName);
-                    printLine(classNode);
-                    status = 2;
-                } else if (isContain(compare, req_ConstructName) == false
-                        && req_ConstructRule.equalsIgnoreCase("false")) {
-                    System.out.println("Required Modifier not Found: " + req_ConstructName);
-                    printLine(classNode);
-                    status = 2;
+                    } else if (isContain(compare, req_ConstructName) == true
+                            && req_ConstructRule.equalsIgnoreCase("true")) {
+                        System.out.println("Found Forbidden Modifier: " + req_ConstructName);
+                        printLine(classNode);
+                        status = 2;
+                    } else if (isContain(compare, req_ConstructName) == false
+                            && req_ConstructRule.equalsIgnoreCase("false")) {
+                        System.out.println("Required Modifier not Found: " + req_ConstructName);
+                        printLine(classNode);
+                        status = 2;
 
+                    }
+                    currentStatus.add(status);
                 }
-                currentStatus.add(status);
             }
+            
 
             // Checking for Super Class
             JSONArray req_SuperClass = (JSONArray) config.get("parentClass");
-            for (Object requiredConstruct : req_SuperClass) {
-                JSONObject req_Construct = (JSONObject) requiredConstruct;
-                String req_ConstructName = req_Construct.get("name").toString();
+            if ( req_SuperClass != null) {
+            	for (Object requiredConstruct : req_SuperClass) {
+                    JSONObject req_Construct = (JSONObject) requiredConstruct;
+                    String req_ConstructName = req_Construct.get("name").toString();
 
-                String req_ConstructRule = req_Construct.getOrDefault("forbidden", false).toString();
-                // String req_ConstructRule = req_Construct.get("forbidden").toString();
-                String compSuper = classNode.getExtendedTypes().toString();
+                    String req_ConstructRule = req_Construct.getOrDefault("forbidden", false).toString();
+                    // String req_ConstructRule = req_Construct.get("forbidden").toString();
+                    String compSuper = classNode.getExtendedTypes().toString();
 
-                if (isContain(compSuper, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("false")) {
-                    // System.out.println("Required Parent Class: " + req_ConstructName);
-                    // System.out.println("Found Required Parent Class: "+req_ConstructName);
+                    if (isContain(compSuper, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("false")) {
+                        // System.out.println("Required Parent Class: " + req_ConstructName);
+                        // System.out.println("Found Required Parent Class: "+req_ConstructName);
+                        // break;
+                        status = 1;
+                    } else if (isContain(compSuper, req_ConstructName) == true
+                            && req_ConstructRule.equalsIgnoreCase("true")) {
+                        System.out.println("Found Forbidden Parent Class: " + req_ConstructName);
+                        printLine(classNode);
+                        status = 2;
+                        break;
+                    } else if (classNode.getExtendedTypes().isEmpty()) {
+                        System.out.println("No Parent Class Extended");
+                        printLine(classNode);
+                        status = 2;
+                        break;
+                    } else if (isContain(compSuper, req_ConstructName) == false
+                            && req_ConstructRule.equalsIgnoreCase("false")) {
+                        System.out.println("Required Parent Class not Extended: " + req_ConstructName);
+                        printLine(classNode);
+                        status = 2;
+
+                    }
+                    // else if(isContain(compSuper, req_ConstructName) == false &&
+                    // req_ConstructRule.equalsIgnoreCase("false")) {
+                    // System.out.println("Extended an unspecified Parent Class");
+                    // printLine(classNode);
+                    // status = 2;
                     // break;
-                    status = 1;
-                } else if (isContain(compSuper, req_ConstructName) == true
-                        && req_ConstructRule.equalsIgnoreCase("true")) {
-                    System.out.println("Found Forbidden Parent Class: " + req_ConstructName);
-                    printLine(classNode);
-                    status = 2;
-                    break;
-                } else if (classNode.getExtendedTypes().isEmpty()) {
-                    System.out.println("No Parent Class Extended");
-                    printLine(classNode);
-                    status = 2;
-                    break;
-                } else if (isContain(compSuper, req_ConstructName) == false
-                        && req_ConstructRule.equalsIgnoreCase("false")) {
-                    System.out.println("Required Parent Class not Extended: " + req_ConstructName);
-                    printLine(classNode);
-                    status = 2;
-
+                    // }
+                    currentStatus.add(status);
                 }
-                // else if(isContain(compSuper, req_ConstructName) == false &&
-                // req_ConstructRule.equalsIgnoreCase("false")) {
-                // System.out.println("Extended an unspecified Parent Class");
-                // printLine(classNode);
-                // status = 2;
-                // break;
-                // }
-                currentStatus.add(status);
             }
+            
 
             // Checking for Interface
             JSONArray req_Interfaces = (JSONArray) config.get("interfaceToImplement");
-            for (Object requiredConstruct : req_Interfaces) {
-                JSONObject req_Construct = (JSONObject) requiredConstruct;
-                String req_ConstructName = req_Construct.get("name").toString();
-                String req_ConstructRule = req_Construct.getOrDefault("forbidden", false).toString();
-                String compare = classNode.getImplementedTypes().toString();
+            if ( req_Interfaces != null) {
+            
+            	for (Object requiredConstruct : req_Interfaces) {
+                    JSONObject req_Construct = (JSONObject) requiredConstruct;
+                    String req_ConstructName = req_Construct.get("name").toString();
+                    String req_ConstructRule = req_Construct.getOrDefault("forbidden", false).toString();
+                    String compare = classNode.getImplementedTypes().toString();
 
-                // Checking Interface
-                if (isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("false")) {
-                    // System.out.println("Required Interface: " + req_ConstructName);
-                    // System.out.println("Found Required Interface: "+req_ConstructName);
-                    status = 1;
-                } else if (isContain(compare, req_ConstructName) == true
-                        && req_ConstructRule.equalsIgnoreCase("true")) {
-                    System.out.println("Found Forbidden Interface: " + req_ConstructName);
-                    printLine(classNode);
-                    status = 2;
-                } else if (classNode.getImplementedTypes().isEmpty()) {
-                    System.out.println("No Interface Implemented");
-                    printLine(classNode);
-                    status = 2;
-                    break;
-                } else if (isContain(compare, req_ConstructName) == false
-                        && req_ConstructRule.equalsIgnoreCase("false")) {
-                    System.out.println("Required Interface not Implemented: " + req_ConstructName);
-                    printLine(classNode);
-                    status = 2;
+                    // Checking Interface
+                    if (isContain(compare, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("false")) {
+                        // System.out.println("Required Interface: " + req_ConstructName);
+                        // System.out.println("Found Required Interface: "+req_ConstructName);
+                        status = 1;
+                    } else if (isContain(compare, req_ConstructName) == true
+                            && req_ConstructRule.equalsIgnoreCase("true")) {
+                        System.out.println("Found Forbidden Interface: " + req_ConstructName);
+                        printLine(classNode);
+                        status = 2;
+                    } else if (classNode.getImplementedTypes().isEmpty()) {
+                        System.out.println("No Interface Implemented");
+                        printLine(classNode);
+                        status = 2;
+                        break;
+                    } else if (isContain(compare, req_ConstructName) == false
+                            && req_ConstructRule.equalsIgnoreCase("false")) {
+                        System.out.println("Required Interface not Implemented: " + req_ConstructName);
+                        printLine(classNode);
+                        status = 2;
+                    }
+                    // else if(isContain(compare, req_ConstructName) == false &&
+                    // req_ConstructRule.equalsIgnoreCase("false")) {
+                    // System.out.println("Implemented an unspecified Interface");
+                    // printLine(classNode);
+                    // status = 1;
+                    // break;
+                    // }
+                    currentStatus.add(status);
+
                 }
-                // else if(isContain(compare, req_ConstructName) == false &&
-                // req_ConstructRule.equalsIgnoreCase("false")) {
-                // System.out.println("Implemented an unspecified Interface");
-                // printLine(classNode);
-                // status = 1;
-                // break;
-                // }
-                currentStatus.add(status);
-
             }
+            
 
             if (currentStatus.contains(2)) {
                 System.out.println("Test Status: Failed");
                 return null;
             } else {
-                System.out.println("Test Status: Successful");
+//                System.out.println("Test Status: Successful");
                 return classNode;
             }
 
@@ -238,20 +260,11 @@ public class Analyzer {
         node.getRange().ifPresent(r -> System.out.println("line: " + r.begin.line));
     }
 
-    public static void parseJavaCode(String javaCode, String configFilePath) {
-        JSONObject config = Analyzer.parseConfigFile(configFilePath);
-        CompilationUnit cu = JavaParser.parse(javaCode);
-        ClassOrInterfaceDeclaration classDeclaration = analyzeClass(cu, config);
-        if (classDeclaration != null) {
-            // Check Method
-        }
-    }
-
     private static JSONObject parseConfigFile(String configFilePath) {
         JSONParser parser = new JSONParser();
         try {
             JSONObject config = (JSONObject) parser.parse(new FileReader(configFilePath));
-            System.out.println(config.get("requiredClass").toString());
+//            System.out.println(config.get("requiredClass").toString());
             return (JSONObject) config.get("requiredClass");
         } catch (IndexOutOfBoundsException indexOutOfBoundsException) {
             System.out.println("No config file was provided.");
@@ -262,6 +275,20 @@ public class Analyzer {
         }
     }
 
+    private static String getErrorString (int errorCode ) {
+        JSONParser parser = new JSONParser();
+        try {
+        	String path = "/Users/wajahatalikhan/eclipse-workspace/JavaCodeAnalyzer/ErrorStrings.json";
+            JSONObject errorStrings = (JSONObject) parser.parse(new FileReader(path));
+            return  (errorStrings.get(Integer.toString(errorCode)) != null) ? (String) errorStrings.get(Integer.toString(errorCode)) : "Error Undefined";
+        } catch (IndexOutOfBoundsException indexOutOfBoundsException) {
+            return "No error description file was provided.";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
     private static FileInputStream getFileInputStream(String javaCodeFilepath) {
         FileInputStream javaCodeFileStream = null;
         try {
@@ -274,13 +301,13 @@ public class Analyzer {
 
     // New Parsing Methods
 
-    private static void checkMethods(CompilationUnit cu, JSONObject config) {
+    private static void checkMethods(ClassOrInterfaceDeclaration cd, JSONObject config) {
 
         JSONArray requiredMethodsConfig = (JSONArray) config.get("requiredMethods");
         for (int i = 0; requiredMethodsConfig != null && i < requiredMethodsConfig.size(); i++) {
             // Each object inside `requiredMethods` array
             JSONObject methodConfig = (JSONObject) requiredMethodsConfig.get(i);
-            MethodDeclaration methodDeclaration = checkMethodSignature(cu, methodConfig);
+            MethodDeclaration methodDeclaration = checkMethodSignature(cd, methodConfig);
             if (methodDeclaration != null) {
                 checkMethodAccessModifier(methodDeclaration, methodConfig);
                 checkMethodOtherModifier(methodDeclaration, methodConfig);
@@ -291,17 +318,21 @@ public class Analyzer {
                     if (codeBlock.isPresent()) {
                         if (checkUserDefinedMethodCall(codeBlock.get())) {
                             JSONArray builtInMethods = (JSONArray) methodConfig.get("builtInMethods");
-                            counter = 0;
-                            for (int j = 0; j < builtInMethods.size(); j++) {
-                                JSONObject builtInMethod = (JSONObject) builtInMethods.get(j);
-                                if (checkBuiltInMethodCall(codeBlock.get(), builtInMethod)) {
-                                    counter++;
+                            if (builtInMethods != null) {
+                            	counter = 0;
+                                for (int j = 0; j < builtInMethods.size(); j++) {
+                                    JSONObject builtInMethod = (JSONObject) builtInMethods.get(j);
+                                    if (checkBuiltInMethodCall(codeBlock.get(), builtInMethod)) {
+                                        counter++;
+                                    }
                                 }
-                            }
-                            if (counter == builtInMethods.size()) {
-                                JSONArray requiredConstructs = (JSONArray) methodConfig.get("constructs");
-                                if (checkMethodConstructs(codeBlock.get(), requiredConstructs)) {
-                                    System.out.println("Success");
+                                if (counter == builtInMethods.size()) {
+                                    JSONArray requiredConstructs = (JSONArray) methodConfig.get("constructs");
+                                    if ( requiredConstructs != null) {
+                                    	if (checkMethodConstructs(codeBlock.get(), requiredConstructs)) {
+//                                            System.out.println("Success");
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -312,8 +343,8 @@ public class Analyzer {
         }
     }
 
-    private static MethodDeclaration checkMethodSignature(CompilationUnit cu, JSONObject methodConfig) {
-        MethodDeclaration methodDeclaration = checkMethodName(cu, methodConfig);
+    private static MethodDeclaration checkMethodSignature(ClassOrInterfaceDeclaration cd, JSONObject methodConfig) {
+        MethodDeclaration methodDeclaration = checkMethodName(cd, methodConfig);
         if (methodDeclaration != null && checkMethodReturnType(methodDeclaration, methodConfig)
                 && checkMethodParameters(methodDeclaration, methodConfig)) {
             return methodDeclaration;
@@ -322,7 +353,7 @@ public class Analyzer {
         }
     }
 
-    private static MethodDeclaration checkMethodName(CompilationUnit cu, JSONObject methodConfig) {
+    private static MethodDeclaration checkMethodName(ClassOrInterfaceDeclaration cd, JSONObject methodConfig) {
         if (methodConfig.get("name") == null) {
             System.out.println("Problem: Objects of `requiredMethods` array must contain `name` property");
             return null;
@@ -330,7 +361,7 @@ public class Analyzer {
             JSONObject required = new JSONObject();
             required.put("name", methodConfig.get("name").toString());
             VoidVisitor<JSONObject> methodNameTester = new MethodNameTester();
-            methodNameTester.visit(cu, required);
+            methodNameTester.visit(cd, required);
             if (required.get("success") == null) {
                 required.put("success", false);
                 required.put("errorCode", 210);
@@ -481,10 +512,16 @@ public class Analyzer {
 
         VoidVisitor<JSONObject> methodCallExprTester = new MethodCallExprTester();
         methodCallExprTester.visit(codeBlock, required);
-        if (required.get("success") == null) {
-            required.put("success", false);
-            required.put("errorCode", 275); // No Methods Called
-            required.put("md", null);
+        if (required.get("success") == null ) {
+            if (requirement) {
+            	required.put("success", false);
+                required.put("errorCode", 275); // No Methods Called
+                required.put("md", null);
+            } else {
+            	required.put("success", true);
+                required.put("errorCode", 0); // No Methods Called
+                required.put("md", null);
+            }
         }
         displayResult(required);
         return (Boolean) required.get("success");
@@ -533,11 +570,14 @@ public class Analyzer {
 
     private static void displayResult(JSONObject result) {
         if (!(Boolean) result.get("success")) {
-            System.out.println("Error: " + result.get("errorCode"));
+        	
+            System.out.println("Error Code: " + result.get("errorCode") );
+            System.out.println("Error Message: " + getErrorString( (int) result.get("errorCode")));
+            
             if ((Range) result.get("range") != null)
                 System.out.println("Location: " + ((Range) result.get("range")).begin);
         } else {
-            System.out.println("OK !");
+//            System.out.println("OK !");
         }
 
     }

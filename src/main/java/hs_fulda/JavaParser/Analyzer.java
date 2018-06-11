@@ -25,7 +25,9 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.BinaryExpr;
 import com.github.javaparser.ast.expr.ConditionalExpr;
+import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MethodCallExpr;
+import com.github.javaparser.ast.expr.UnaryExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.visitor.VoidVisitor;
@@ -177,7 +179,6 @@ public class Analyzer {
                 }
             }
 
-
             // Checking for Interface
             JSONArray req_Interfaces = (JSONArray) config.get("interfaceToImplement");
             if (req_Interfaces != null) {
@@ -220,7 +221,6 @@ public class Analyzer {
 
                 }
             }
-
 
             if (currentStatus.contains(2)) {
                 System.out.println("Test Status: Failed");
@@ -281,12 +281,11 @@ public class Analyzer {
     private static String getErrorString(int errorCode) {
         JSONParser parser = new JSONParser();
         try {
-            // String path = "/Users/wajahatalikhan/eclipse-workspace/JavaCodeAnalyzer/ErrorStrings.json";
             String path = new File("").getAbsolutePath().concat("/ErrorStrings.json");
             JSONObject errorStrings = (JSONObject) parser.parse(new FileReader(path));
             return (errorStrings.get(Integer.toString(errorCode)) != null)
                     ? (String) errorStrings.get(Integer.toString(errorCode))
-                    : "Error Undefined";
+                    : null;
         } catch (IndexOutOfBoundsException indexOutOfBoundsException) {
             return "No error description file was provided.";
         } catch (Exception e) {
@@ -496,14 +495,15 @@ public class Analyzer {
                 forbidden = true;
             }
             JSONObject required = new JSONObject();
+            Long level = (long) -1;// (Long) ;
+            if (operatorConfig.containsKey("level")) {
+                level = (long) operatorConfig.get("level");
+            }
+            required.put("level", level);
             required.put("operatorName", operatorConfig.get("name").toString());
             required.put("forbidden", forbidden);
-            if (operatorConfig.containsKey("level")) {
-                required.put("level", (int) operatorConfig.get("level"));
-            }
             VoidVisitor<JSONObject> methodOperatorsTester = new MethodOperatorsTester();
             methodOperatorsTester.visit(methodDeclaration, required);
-            displayResult(required);
         }
     }
 
@@ -603,7 +603,10 @@ public class Analyzer {
         if (!(Boolean) result.get("success")) {
 
             System.out.println("Error Code: " + result.get("errorCode"));
-            System.out.println("Error Message: " + getErrorString((int) result.get("errorCode")));
+            String errorString = getErrorString((int) result.get("errorCode"));
+            if (errorString != null) {
+                System.out.println("Error Message: " + errorString);
+            }
 
             if ((Range) result.get("range") != null)
                 System.out.println("Location: " + ((Range) result.get("range")).begin);
@@ -818,31 +821,122 @@ public class Analyzer {
     private static class MethodOperatorsTester extends VoidVisitorAdapter<JSONObject> {
 
         @Override
-        public void visit(BinaryExpr binaryExpression, JSONObject jobject) {
-            super.visit(binaryExpression, jobject);
+        public void visit(MethodDeclaration methodDeclaration, JSONObject jobject) {
+            super.visit(methodDeclaration, jobject);
 
             if (jobject.containsKey("success") && (Boolean) jobject.get("success")) {
                 return;
             }
 
+            long requiredLevel = (long) jobject.get("level");
+            long level = 0;
             Boolean forbidden = (Boolean) jobject.get("forbidden");
             String operatorExpected = jobject.get("operatorName").toString();
-            Boolean operatorFound = binaryExpression.getOperator().asString().equals(operatorExpected);
+            Boolean operatorFound = false;
 
-            if ((operatorFound && !forbidden) || (!operatorFound && forbidden)) {
-                jobject.put("success", true);
-            } else if (operatorFound && forbidden) {
-                jobject.put("success", false);
-                jobject.put("errorCode", 310);
-                System.out.println("Forbidden operator `" + operatorExpected + "` is present");
-                // problems.add(new Problem("Forbidden operator `" + operatorExpected + "` is
-                // present", md.getRange().get()));
-            } else {
-                jobject.put("success", false);
-                jobject.put("errorCode", 311);
-                System.out.println("Required operator `" + operatorExpected + "` is not present");
-                // problems.add(new Problem("Required operator `" + operatorExpected + "` is not
-                // present", md.getRange().get()));
+            List<BinaryExpr> binaryOperatorExpressions = methodDeclaration.getChildNodesByType(BinaryExpr.class);
+            for (BinaryExpr binaryOperatorExpression : binaryOperatorExpressions) {
+                if (binaryOperatorExpression.getOperator().asString().equals(operatorExpected)) {
+                    Optional<Node> pn = binaryOperatorExpression.getAncestorOfType(BlockStmt.class).get()
+                            .getParentNode();
+                    while (pn.isPresent()
+                            && !pn.get().getClass().getSimpleName().toString().equals("MethodDeclaration")) {
+                        pn = pn.get().getParentNode();
+                        if (pn.get().getClass().getSimpleName().toString().equals("BlockStmt")) {
+                            level++;
+                        }
+                    }
+                    // if (requiredLevel == -1) { requiredLevel = level; }
+                    operatorFound = binaryOperatorExpression.getOperator().asString().equals(operatorExpected)
+                            && (requiredLevel == -1 || requiredLevel == level);
+
+                    if ((operatorFound && !forbidden) || (!operatorFound && forbidden)) {
+                        jobject.put("success", true);
+                    } else if (operatorFound && forbidden) {
+                        jobject.put("success", false);
+                        jobject.put("errorCode", 310);
+                        System.out.println("Forbidden operator `" + operatorExpected + "` is present "
+                                + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
+                        jobject.put("range", binaryOperatorExpression.getRange().get());
+                        // problems.add(new Problem("Forbidden operator `" + operatorExpected + "` is
+                        // present", md.getRange().get()));
+                    } else {
+                        jobject.put("success", false);
+                        jobject.put("errorCode", 311);
+                        System.out.println("Required operator `" + operatorExpected + "` is not present "
+                                + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
+                        jobject.put("range", binaryOperatorExpression.getRange().get());
+                        // problems.add(new Problem("Required operator `" + operatorExpected + "` is not
+                        // present", md.getRange().get()));
+                    }
+                    displayResult(jobject);
+                }
+            }
+            List<UnaryExpr> unaryOperatorExpressions = methodDeclaration.getChildNodesByType(UnaryExpr.class);
+            for (UnaryExpr unaryOperatorExpression : unaryOperatorExpressions) {
+                if (unaryOperatorExpression.getOperator().asString().equals(operatorExpected)) {
+                    Optional<Node> pn = unaryOperatorExpression.getAncestorOfType(BlockStmt.class).get()
+                            .getParentNode();
+                    while (pn.isPresent()
+                            && !pn.get().getClass().getSimpleName().toString().equals("MethodDeclaration")) {
+                        pn = pn.get().getParentNode();
+                        if (pn.get().getClass().getSimpleName().toString().equals("BlockStmt")) {
+                            level++;
+                        }
+                    }
+                    operatorFound = unaryOperatorExpression.getOperator().asString().equals(operatorExpected)
+                            && (requiredLevel == -1 || requiredLevel == level);
+
+                    if ((operatorFound && !forbidden) || (!operatorFound && forbidden)) {
+                        jobject.put("success", true);
+                    } else if (operatorFound && forbidden) {
+                        jobject.put("success", false);
+                        jobject.put("errorCode", 310);
+                        System.out.println("Forbidden operator `" + operatorExpected + "` is present "
+                                + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
+                        jobject.put("range", unaryOperatorExpression.getRange().get());
+                    } else {
+                        jobject.put("success", false);
+                        jobject.put("errorCode", 311);
+                        System.out.println("Required operator `" + operatorExpected + "` is not present "
+                                + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
+                        jobject.put("range", unaryOperatorExpression.getRange().get());
+                    }
+                    displayResult(jobject);
+                }
+            }
+            List<ConditionalExpr> conditionalOperatorExpressions = methodDeclaration
+                    .getChildNodesByType(ConditionalExpr.class);
+            for (ConditionalExpr conditionalOperatorExpression : conditionalOperatorExpressions) {
+                if (operatorExpected.equals("?")) {
+                    Optional<Node> pn = conditionalOperatorExpression.getAncestorOfType(BlockStmt.class).get()
+                            .getParentNode();
+                    while (pn.isPresent()
+                            && !pn.get().getClass().getSimpleName().toString().equals("MethodDeclaration")) {
+                        pn = pn.get().getParentNode();
+                        if (pn.get().getClass().getSimpleName().toString().equals("BlockStmt")) {
+                            level++;
+                        }
+                    }
+                    operatorFound = operatorExpected.equals("?") && (requiredLevel == -1 || requiredLevel == level);
+
+                    if ((operatorFound && !forbidden) || (!operatorFound && forbidden)) {
+                        jobject.put("success", true);
+                    } else if (operatorFound && forbidden) {
+                        jobject.put("success", false);
+                        jobject.put("errorCode", 310);
+                        System.out.println("Forbidden operator `" + operatorExpected + "` is present "
+                                + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
+                        jobject.put("range", conditionalOperatorExpression.getRange().get());
+                    } else {
+                        jobject.put("success", false);
+                        jobject.put("errorCode", 311);
+                        System.out.println("Required operator `" + operatorExpected + "` is not present "
+                                + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
+                        jobject.put("range", conditionalOperatorExpression.getRange().get());
+                    }
+                    displayResult(jobject);
+                }
             }
         }
     }

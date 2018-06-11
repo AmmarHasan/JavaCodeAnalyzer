@@ -9,7 +9,7 @@
           { "name": "private", "forbidden": true }
         ],
         "modifiers": [
-        	{ "name": "static" } ,
+        	{ "name": "static", "forbidden": true } ,
         	{ "name": "abstract", "forbidden": true }
         ],
         "annotations": [
@@ -17,11 +17,24 @@
         	{ "name": "abstract", "forbidden": true }
         ],
         "return": "long",
-        "parameters": [ "int", "int" ],
+      "parameters": [ "int", "int" ],
         "restrictUserDefinedMethod": true,
         "builtInMethods": [ { "name": "multiplyFull", "forbidden": true } ],
 
-        "operators": [ { "name": "*", "forbidden": true } ],
+        "operators": [
+          {
+            "name": "++",
+            "level": 1
+          },
+          {
+            "name": "+",
+            "level": 2
+          },
+          {
+            "name": "?",
+            "forbidden": true
+          }
+        ],
         "constructs": [ { "name": "if" , "forbidden": true ,"level" : 0 } ]
       }
     ]

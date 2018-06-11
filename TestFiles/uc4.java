@@ -6,6 +6,9 @@
 public class DemoMath {
     public static long multiply(int a, int b) {
       long result = 0;
+      result = 1 + 1;
+      result++;
+      result = result == 1? 2: 0;
       for (int i=0; i < a; i++) {
         result += b;
       }

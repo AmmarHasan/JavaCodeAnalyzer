@@ -9,20 +9,23 @@
           { "name": "private", "forbidden": true }
         ],
         "modifiers": [
-        	{ "name": "static" } ,
+        	{ "name": "static"} ,
         	{ "name": "abstract", "forbidden": true }
         ],
         "annotations": [
-        	{ "name": "override", "forbidden": true } ,
-        	{ "name": "abstract", "forbidden": true }
+        	{ "name": "override" }
         ],
+        
         "return": "long",
-        "parameters": [ "int", "int" ],
-        "restrictUserDefinedMethod": true,
-        "builtInMethods": [ { "name": "multiplyFull", "forbidden": true } ],
+        "parameters": [ "int" ,"int" ],
+        
 
-        "operators": [ { "name": "*", "forbidden": true } ],
-        "constructs": [ { "name": "if" , "forbidden": true ,"level" : 0 } ]
+        "methodCalls": [ 
+        				{ "className": "Math" ,"forbidden": true } 
+        			],
+        
+        "constructs": [ { "name": "if"   } ],
+        "operators": [ { "name": "*", "forbidden": true } ]
       }
     ]
   }

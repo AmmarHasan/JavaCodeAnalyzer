@@ -18,14 +18,32 @@
         
         "return": "long",
         "parameters": [ "int" ,"int" ],
-        
-
         "methodCalls": [ 
-        				{ "className": "Math" ,"forbidden": true } 
+        				{ 
+        					"className": "Math",
+        					"methodName" : "multiplyFull" , 
+        					"forbidden": true
+        				},{ 
+        					"className": "Math",
+        					"methodName" : "abs" , 
+        					"forbidden": true
+        				}
         			],
-        
-        "constructs": [ { "name": "if"   } ],
-        "operators": [ { "name": "*", "forbidden": true } ]
+        "operators": [
+          {
+            "name": "++",
+            "level": 1
+          },
+          {
+            "name": "+",
+            "level": 2
+          },
+          {
+            "name": "?",
+            "forbidden": true
+          }
+        ],
+        "constructs": [ { "name": "for" ,"level" : 0 } ]
       }
     ]
   }

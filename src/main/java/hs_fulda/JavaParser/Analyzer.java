@@ -1,5 +1,6 @@
 package hs_fulda.JavaParser;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -22,7 +23,11 @@ import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
+import com.github.javaparser.ast.expr.BinaryExpr;
+import com.github.javaparser.ast.expr.ConditionalExpr;
+import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MethodCallExpr;
+import com.github.javaparser.ast.expr.UnaryExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.visitor.VoidVisitor;
@@ -34,20 +39,19 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 public class Analyzer {
-	
+
     public static void parseJavaFile(String javaFilePath, String configFilePath) {
     	
         JSONObject config = Analyzer.parseConfigFile(configFilePath);
         FileInputStream fileInputStream = getFileInputStream(javaFilePath);
         CompilationUnit cu = JavaParser.parse(fileInputStream);
-//        printAST(cu);
         ClassOrInterfaceDeclaration classDeclaration = analyzeClass(cu, config);
         if (classDeclaration != null) {
             // Check Method
-        	checkMethods( classDeclaration, config);
+            checkMethods(classDeclaration, config);
         }
     }
-    
+
     public static void parseJavaCode(String javaCode, String configFilePath) {
         JSONObject config = Analyzer.parseConfigFile(configFilePath);
         CompilationUnit cu = JavaParser.parse(javaCode);
@@ -60,7 +64,7 @@ public class Analyzer {
     // Class Parsing Methods
     
     @SuppressWarnings("unchecked")
-    private static ClassOrInterfaceDeclaration analyzeClass (CompilationUnit cu, JSONObject config) {
+    private static ClassOrInterfaceDeclaration analyzeClass(CompilationUnit cu, JSONObject config) {
         String req_ClassName = config.get("name").toString();
         // System.out.println("Required Class: " + req_ClassName);
         int status = 0;
@@ -74,8 +78,8 @@ public class Analyzer {
 
             // Check Class Access Modifier
             JSONArray requiredConstructs = (JSONArray) config.get("accessModifier");
-            if ( requiredConstructs != null) {
-            	for (Object requiredConstruct : requiredConstructs) {
+            if (requiredConstructs != null) {
+                for (Object requiredConstruct : requiredConstructs) {
                     JSONObject req_Construct = (JSONObject) requiredConstruct;
                     String req_ConstructName = req_Construct.get("name").toString();
                     String req_ConstructRule = req_Construct.getOrDefault("forbidden", false).toString();
@@ -99,11 +103,11 @@ public class Analyzer {
                     currentStatus.add(status);
                 }
             }
-            
+
             // Checking Class Modifier
             JSONArray neededConstructs = (JSONArray) config.get("modifier");
-            if ( neededConstructs != null) {
-            	for (Object neededConstruct : neededConstructs) {
+            if (neededConstructs != null) {
+                for (Object neededConstruct : neededConstructs) {
                     JSONObject req_Construct = (JSONObject) neededConstruct;
                     String req_ConstructName = req_Construct.get("name").toString();
                     String req_ConstructRule = req_Construct.getOrDefault("forbidden", false).toString();
@@ -130,12 +134,11 @@ public class Analyzer {
                     currentStatus.add(status);
                 }
             }
-            
 
             // Checking for Super Class
             JSONArray req_SuperClass = (JSONArray) config.get("parentClass");
-            if ( req_SuperClass != null) {
-            	for (Object requiredConstruct : req_SuperClass) {
+            if (req_SuperClass != null) {
+                for (Object requiredConstruct : req_SuperClass) {
                     JSONObject req_Construct = (JSONObject) requiredConstruct;
                     String req_ConstructName = req_Construct.get("name").toString();
 
@@ -143,7 +146,8 @@ public class Analyzer {
                     // String req_ConstructRule = req_Construct.get("forbidden").toString();
                     String compSuper = classNode.getExtendedTypes().toString();
 
-                    if (isContain(compSuper, req_ConstructName) == true && req_ConstructRule.equalsIgnoreCase("false")) {
+                    if (isContain(compSuper, req_ConstructName) == true
+                            && req_ConstructRule.equalsIgnoreCase("false")) {
                         // System.out.println("Required Parent Class: " + req_ConstructName);
                         // System.out.println("Found Required Parent Class: "+req_ConstructName);
                         // break;
@@ -176,13 +180,12 @@ public class Analyzer {
                     currentStatus.add(status);
                 }
             }
-            
 
             // Checking for Interface
             JSONArray req_Interfaces = (JSONArray) config.get("interfaceToImplement");
-            if ( req_Interfaces != null) {
-            
-            	for (Object requiredConstruct : req_Interfaces) {
+            if (req_Interfaces != null) {
+
+                for (Object requiredConstruct : req_Interfaces) {
                     JSONObject req_Construct = (JSONObject) requiredConstruct;
                     String req_ConstructName = req_Construct.get("name").toString();
                     String req_ConstructRule = req_Construct.getOrDefault("forbidden", false).toString();
@@ -220,13 +223,12 @@ public class Analyzer {
 
                 }
             }
-            
 
             if (currentStatus.contains(2)) {
                 System.out.println("Test Status: Failed");
                 return null;
             } else {
-//                System.out.println("Test Status: Successful");
+                // System.out.println("Test Status: Successful");
                 return classNode;
             }
 
@@ -267,7 +269,7 @@ public class Analyzer {
         JSONParser parser = new JSONParser();
         try {
             JSONObject config = (JSONObject) parser.parse(new FileReader(configFilePath));
-//            System.out.println(config.get("requiredClass").toString());
+            // System.out.println(config.get("requiredClass").toString());
             return (JSONObject) config.get("requiredClass");
         } catch (IndexOutOfBoundsException indexOutOfBoundsException) {
             System.out.println("No config file was provided.");
@@ -278,12 +280,14 @@ public class Analyzer {
         }
     }
 
-    private static String getErrorString (int errorCode ) {
+    private static String getErrorString(int errorCode) {
         JSONParser parser = new JSONParser();
         try {
-        	String path = "/Users/wajahatalikhan/eclipse-workspace/JavaCodeAnalyzer/ErrorStrings.json";
+            String path = new File("").getAbsolutePath().concat("/ErrorStrings.json");
             JSONObject errorStrings = (JSONObject) parser.parse(new FileReader(path));
-            return  (errorStrings.get(Integer.toString(errorCode)) != null) ? (String) errorStrings.get(Integer.toString(errorCode)) : "Error Undefined";
+            return (errorStrings.get(Integer.toString(errorCode)) != null)
+                    ? (String) errorStrings.get(Integer.toString(errorCode))
+                    : null;
         } catch (IndexOutOfBoundsException indexOutOfBoundsException) {
             return "No error description file was provided.";
         } catch (Exception e) {
@@ -291,7 +295,7 @@ public class Analyzer {
             return null;
         }
     }
-    
+
     private static FileInputStream getFileInputStream(String javaCodeFilepath) {
         FileInputStream javaCodeFileStream = null;
         try {
@@ -317,6 +321,7 @@ public class Analyzer {
                 checkMethodAnnotation(methodDeclaration, methodConfig);
                 checkMethodCalls (methodDeclaration, methodConfig, cd.getNameAsString());
                 checkMethodConstructs (methodDeclaration, methodConfig);
+                checkOperators(methodDeclaration, methodConfig);
             }
         }
     }
@@ -505,6 +510,34 @@ public class Analyzer {
         }
     }
     
+    private static void checkOperators(MethodDeclaration methodDeclaration, JSONObject methodConfig) {
+        JSONArray operatorsConfig = (JSONArray) methodConfig.get("operators");
+        for (int j = 0; operatorsConfig != null && j < operatorsConfig.size(); j++) {
+            JSONObject operatorConfig = (JSONObject) operatorsConfig.get(j);
+            if (!operatorConfig.containsKey("name")) {
+                System.out.println("Problem: Objects of `operators` array must contain `name` property");
+                continue;
+            }
+            Boolean forbidden = false;
+            if (operatorConfig.containsKey("forbidden") && (Boolean) operatorConfig.get("forbidden")) {
+                forbidden = true;
+            }
+            JSONObject required = new JSONObject();
+            Long level = (long) -1;// (Long) ;
+            if (operatorConfig.containsKey("level")) {
+                level = (long) operatorConfig.get("level");
+            }
+            
+            required.put("level", level);
+            required.put("operatorName", operatorConfig.get("name").toString());
+            required.put("forbidden", forbidden);
+            
+            
+            VoidVisitor<JSONObject> methodOperatorsTester = new MethodOperatorsTester();
+            methodOperatorsTester.visit(methodDeclaration, required);
+        }
+    }
+
     @Deprecated
     private static Boolean checkUserDefinedMethodCall(BlockStmt codeBlock) {
 
@@ -543,13 +576,13 @@ public class Analyzer {
 
         VoidVisitor<JSONObject> methodCallExprTester = new MethodCallExprTester();
         methodCallExprTester.visit(codeBlock, required);
-        if (required.get("success") == null ) {
+        if (required.get("success") == null) {
             if (requirement) {
-            	required.put("success", false);
+                required.put("success", false);
                 required.put("errorCode", 275); // No Methods Called
                 required.put("md", null);
             } else {
-            	required.put("success", true);
+                required.put("success", true);
                 required.put("errorCode", 0); // No Methods Called
                 required.put("md", null);
             }
@@ -607,18 +640,22 @@ public class Analyzer {
 
     private static void displayResult(JSONObject result) {
         if (!(Boolean) result.get("success")) {
-        	
-            System.out.println("Error Code: " + result.get("errorCode") );
-            System.out.println("Error Message: " + getErrorString( (int) result.get("errorCode")));
-            
+
+            System.out.println("Error Code: " + result.get("errorCode"));
+            String errorString = getErrorString((int) result.get("errorCode"));
+            if (errorString != null) {
+                System.out.println("Error Message: " + errorString);
+            }
+
             if ((Range) result.get("range") != null)
                 System.out.println("Location: " + ((Range) result.get("range")).begin);
         } else {
-//            System.out.println("OK !");
+            // System.out.println("OK !");
         }
 
     }
 
+    
     // Overriding Visit Methods
 
     private static class MethodNameTester extends VoidVisitorAdapter<JSONObject> {
@@ -814,19 +851,143 @@ public class Analyzer {
                 jobject.put("errorCode", 260);
                 jobject.put("range", md.getRange().get() );
                 System.out.println("Forbidden annotation `" + annotationExpected + "` is present");
-                // problems.add(new Problem("Forbidden annotation `" + annotationExpected + "` is
-                // present", md.getRange().get()));
+                // problems.add(new Problem("Forbidden annotation `" + annotationExpected + "`
+                // is present", md.getRange().get()));
             } else {
                 jobject.put("success", false);
                 jobject.put("errorCode", 261);
                 jobject.put("range", md.getRange().get() );
                 System.out.println("Required annotation `" + annotationExpected + "` is not present");
-                // problems.add(new Problem("Required annotation `" + annotationExpected + "` is not
-                // present", md.getRange().get()));
+                // problems.add(new Problem("Required annotation `" + annotationExpected + "` is
+                // not present", md.getRange().get()));
             }
         }
     }
 
+    private static class MethodOperatorsTester extends VoidVisitorAdapter<JSONObject> {
+
+        @Override
+        public void visit(MethodDeclaration methodDeclaration, JSONObject jobject) {
+            super.visit(methodDeclaration, jobject);
+
+            if (jobject.containsKey("success") && (Boolean) jobject.get("success")) {
+                return;
+            }
+
+            long requiredLevel = (long) jobject.get("level");
+            long level = 0;
+            Boolean forbidden = (Boolean) jobject.get("forbidden");
+            String operatorExpected = jobject.get("operatorName").toString();
+            Boolean operatorFound = false;
+
+            List<BinaryExpr> binaryOperatorExpressions = methodDeclaration.getChildNodesByType(BinaryExpr.class);
+            for (BinaryExpr binaryOperatorExpression : binaryOperatorExpressions) {
+                if (binaryOperatorExpression.getOperator().asString().equals(operatorExpected)) {
+                    Optional<Node> pn = binaryOperatorExpression.getAncestorOfType(BlockStmt.class).get()
+                            .getParentNode();
+                    while (pn.isPresent()
+                            && !pn.get().getClass().getSimpleName().toString().equals("MethodDeclaration")) {
+                        pn = pn.get().getParentNode();
+                        if (pn.get().getClass().getSimpleName().toString().equals("BlockStmt")) {
+                            level++;
+                        }
+                    }
+                    // if (requiredLevel == -1) { requiredLevel = level; }
+                    operatorFound = binaryOperatorExpression.getOperator().asString().equals(operatorExpected)
+                            && (requiredLevel == -1 || requiredLevel == level);
+
+                    if ((operatorFound && !forbidden) || (!operatorFound && forbidden)) {
+                        jobject.put("success", true);
+                    } else if (operatorFound && forbidden) {
+                        jobject.put("success", false);
+                        jobject.put("errorCode", 310);
+                        System.out.println("Forbidden operator `" + operatorExpected + "` is present "
+                                + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
+                        jobject.put("range", binaryOperatorExpression.getRange().get());
+                        // problems.add(new Problem("Forbidden operator `" + operatorExpected + "` is
+                        // present", md.getRange().get()));
+                    } else {
+                        jobject.put("success", false);
+                        jobject.put("errorCode", 311);
+                        System.out.println("Required operator `" + operatorExpected + "` is not present "
+                                + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
+                        jobject.put("range", binaryOperatorExpression.getRange().get());
+                        // problems.add(new Problem("Required operator `" + operatorExpected + "` is not
+                        // present", md.getRange().get()));
+                    }
+                    displayResult(jobject);
+                }
+            }
+            List<UnaryExpr> unaryOperatorExpressions = methodDeclaration.getChildNodesByType(UnaryExpr.class);
+            for (UnaryExpr unaryOperatorExpression : unaryOperatorExpressions) {
+                if (unaryOperatorExpression.getOperator().asString().equals(operatorExpected)) {
+                    Optional<Node> pn = unaryOperatorExpression.getAncestorOfType(BlockStmt.class).get()
+                            .getParentNode();
+                    while (pn.isPresent()
+                            && !pn.get().getClass().getSimpleName().toString().equals("MethodDeclaration")) {
+                        pn = pn.get().getParentNode();
+                        if (pn.get().getClass().getSimpleName().toString().equals("BlockStmt")) {
+                            level++;
+                        }
+                    }
+                    operatorFound = unaryOperatorExpression.getOperator().asString().equals(operatorExpected)
+                            && (requiredLevel == -1 || requiredLevel == level);
+
+                    if ((operatorFound && !forbidden) || (!operatorFound && forbidden)) {
+                        jobject.put("success", true);
+                    } else if (operatorFound && forbidden) {
+                        jobject.put("success", false);
+                        jobject.put("errorCode", 310);
+                        System.out.println("Forbidden operator `" + operatorExpected + "` is present "
+                                + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
+                        jobject.put("range", unaryOperatorExpression.getRange().get());
+                    } else {
+                        jobject.put("success", false);
+                        jobject.put("errorCode", 311);
+                        System.out.println("Required operator `" + operatorExpected + "` is not present "
+                                + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
+                        jobject.put("range", unaryOperatorExpression.getRange().get());
+                    }
+                    displayResult(jobject);
+                }
+            }
+            List<ConditionalExpr> conditionalOperatorExpressions = methodDeclaration
+                    .getChildNodesByType(ConditionalExpr.class);
+            for (ConditionalExpr conditionalOperatorExpression : conditionalOperatorExpressions) {
+                if (operatorExpected.equals("?")) {
+                    Optional<Node> pn = conditionalOperatorExpression.getAncestorOfType(BlockStmt.class).get()
+                            .getParentNode();
+                    while (pn.isPresent()
+                            && !pn.get().getClass().getSimpleName().toString().equals("MethodDeclaration")) {
+                        pn = pn.get().getParentNode();
+                        if (pn.get().getClass().getSimpleName().toString().equals("BlockStmt")) {
+                            level++;
+                        }
+                    }
+                    operatorFound = operatorExpected.equals("?") && (requiredLevel == -1 || requiredLevel == level);
+
+                    if ((operatorFound && !forbidden) || (!operatorFound && forbidden)) {
+                        jobject.put("success", true);
+                    } else if (operatorFound && forbidden) {
+                        jobject.put("success", false);
+                        jobject.put("errorCode", 310);
+                        System.out.println("Forbidden operator `" + operatorExpected + "` is present "
+                                + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
+                        jobject.put("range", conditionalOperatorExpression.getRange().get());
+                    } else {
+                        jobject.put("success", false);
+                        jobject.put("errorCode", 311);
+                        System.out.println("Required operator `" + operatorExpected + "` is not present "
+                                + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
+                        jobject.put("range", conditionalOperatorExpression.getRange().get());
+                    }
+                    displayResult(jobject);
+                }
+            }
+        }
+    }
+
+    
     @Deprecated
     private static class MethodCallExprTester extends VoidVisitorAdapter<JSONObject> {
 
@@ -870,14 +1031,15 @@ public class Analyzer {
         }
     }
     
+    
     private static class MethodCallsExprTester extends VoidVisitorAdapter<JSONObject> {
 
         @Override
         public void visit(MethodCallExpr methodCallExpr, JSONObject jobject) {
             super.visit(methodCallExpr, jobject);
-            if (jobject.containsKey("success") && (Boolean) jobject.get("success")) {
-                    return;
-            }
+//            if (jobject.containsKey("success") && (Boolean) jobject.get("success")) {
+//                    return;
+//            }
                 Boolean requirement = (Boolean) jobject.get("requirement");
                 Boolean isCurrentClass = (Boolean) jobject.get("isCurrentClass");
                 String requiredClassName = jobject.get("className").toString();
@@ -887,7 +1049,7 @@ public class Analyzer {
                 if ( methodCallExpr.getScope().isPresent() ) {
                     scope = methodCallExpr.getScope().get().toString();
                 }
-//                System.out.println("Scope: " + scope+ requiredClassName);
+//                 System.out.println("Scope: " + scope+ requiredClassName);
                 
                 if ( (( scope.isEmpty() || scope.equals("this") ) && isCurrentClass ) // Current Class
                 		||
@@ -946,6 +1108,7 @@ public class Analyzer {
                 }
         }
     }
+    
 
     private static class MethodConstructTester extends VoidVisitorAdapter<JSONObject> {
 

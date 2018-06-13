@@ -524,8 +524,7 @@ public class Analyzer {
                     required.put("errorCode", 0);
                 }
             }
-            
-            displayResult(required);
+//            displayResult(required);
         }
     }
     
@@ -1086,11 +1085,14 @@ public class Analyzer {
                                 jobject.put("errorCode", 273); 
                                 jobject.put("range", methodCallExpr.getRange().get());
                                 jobject.put("cu", Optional.empty());
+                                System.out.println("Forbidden Method Call" + (requiredMethodName != null ? " `"+requiredMethodName+"`" : "") + " is found at: "+ methodCallExpr.getRange().get().begin);
+
                             }
                         } else {
                         	if (requirement) {
                         		jobject.put("success", false);
                                 jobject.put("errorCode", 272); 
+                                System.out.println("Required Method Call `" + requiredMethodName + "` is not present");
 //                                jobject.put("range", methodCallExpr.getRange().get());
 //                                jobject.put("cu", Optional.empty());
                             } else {
@@ -1110,6 +1112,8 @@ public class Analyzer {
                             jobject.put("errorCode", 273); 
                             jobject.put("range", methodCallExpr.getRange().get());
                             jobject.put("cu", Optional.empty());
+                            System.out.println("Forbidden Method Call" + (requiredMethodName != null ? " `"+requiredMethodName+"`" : "") + " is found at: "+ methodCallExpr.getRange().get().begin);
+
                         }
                     }
                 } else {
@@ -1121,6 +1125,8 @@ public class Analyzer {
                     } else {
                         jobject.put("success", false);
                         jobject.put("errorCode", 272);
+                        System.out.println("Required Method Call `" + requiredMethodName + "` is not present");
+
 //                        jobject.put("range", methodCallExpr.getRange().get());
 //                        jobject.put("cu", Optional.empty());
                     }

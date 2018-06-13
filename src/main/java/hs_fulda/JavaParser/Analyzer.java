@@ -45,10 +45,12 @@ public class Analyzer {
         JSONObject config = Analyzer.parseConfigFile(configFilePath);
         FileInputStream fileInputStream = getFileInputStream(javaFilePath);
         CompilationUnit cu = JavaParser.parse(fileInputStream);
-        ClassOrInterfaceDeclaration classDeclaration = analyzeClass(cu, config);
+        
+        checkClassCount(cu, config);
+        JSONObject classConfig = (JSONObject) config.get("requiredClass");
+        ClassOrInterfaceDeclaration classDeclaration = analyzeClass(cu, classConfig);
         if (classDeclaration != null) {
-            // Check Method
-            checkMethods(classDeclaration, config);
+            checkMethods(classDeclaration, classConfig);
         }
     }
 
@@ -61,12 +63,25 @@ public class Analyzer {
         }
     }
 
+    private static void checkClassCount (CompilationUnit cu, JSONObject config) {
+    	if (config.get("maxNumberOfClasses") != null) {
+            long maxClassCount = (long) config.get("maxNumberOfClasses");
+            int currentClassCount = countClasses(cu);
+            if (currentClassCount > maxClassCount) {
+            	System.out.println("Error : Program contains more classes than permitted.");
+            }
+        }
+    }
+    
     // Class Parsing Methods
     
     @SuppressWarnings("unchecked")
     private static ClassOrInterfaceDeclaration analyzeClass(CompilationUnit cu, JSONObject config) {
+    	if (config.get("name") == null) {
+            System.out.println("Problem - Config: Object of `requiredClass` must contain `name` property");
+            return null;
+        }
         String req_ClassName = config.get("name").toString();
-        // System.out.println("Required Class: " + req_ClassName);
         int status = 0;
         List<Integer> currentStatus = new ArrayList<Integer>();
         Stream<ClassOrInterfaceDeclaration> stream_Class = getFilteredClassStream(cu, req_ClassName);
@@ -253,6 +268,11 @@ public class Analyzer {
         }
         return false;
     }
+    
+    private static int countClasses (CompilationUnit cu) {
+        return (int) cu.findAll(ClassOrInterfaceDeclaration.class).stream()
+        .count();
+    }
 
     private static boolean isContain(String source, String subItem) {
         String pattern = "\\b" + subItem + "\\b";
@@ -268,9 +288,8 @@ public class Analyzer {
     private static JSONObject parseConfigFile(String configFilePath) {
         JSONParser parser = new JSONParser();
         try {
-            JSONObject config = (JSONObject) parser.parse(new FileReader(configFilePath));
+            return (JSONObject) parser.parse(new FileReader(configFilePath));
             // System.out.println(config.get("requiredClass").toString());
-            return (JSONObject) config.get("requiredClass");
         } catch (IndexOutOfBoundsException indexOutOfBoundsException) {
             System.out.println("No config file was provided.");
             return null;

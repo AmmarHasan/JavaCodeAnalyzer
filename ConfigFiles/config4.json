@@ -1,4 +1,5 @@
 {
+	"maxNumberOfClasses" : 2,
   "requiredClass": {
     "name": "DemoMath",
     "requiredMethods": [

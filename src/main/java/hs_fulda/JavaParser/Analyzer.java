@@ -41,11 +41,11 @@ import org.json.simple.parser.JSONParser;
 public class Analyzer {
 
     public static void parseJavaFile(String javaFilePath, String configFilePath) {
-    	
+
         JSONObject config = Analyzer.parseConfigFile(configFilePath);
         FileInputStream fileInputStream = getFileInputStream(javaFilePath);
         CompilationUnit cu = JavaParser.parse(fileInputStream);
-        
+
         checkClassCount(cu, config);
         JSONObject classConfig = (JSONObject) config.get("requiredClass");
         ClassOrInterfaceDeclaration classDeclaration = analyzeClass(cu, classConfig);
@@ -63,21 +63,21 @@ public class Analyzer {
         }
     }
 
-    private static void checkClassCount (CompilationUnit cu, JSONObject config) {
-    	if (config.get("maxNumberOfClasses") != null) {
+    private static void checkClassCount(CompilationUnit cu, JSONObject config) {
+        if (config.get("maxNumberOfClasses") != null) {
             long maxClassCount = (long) config.get("maxNumberOfClasses");
             int currentClassCount = countClasses(cu);
             if (currentClassCount > maxClassCount) {
-            	System.out.println("Error : Program contains more classes than permitted.");
+                System.out.println("Error : Program contains more classes than permitted.");
             }
         }
     }
-    
+
     // Class Parsing Methods
-    
+
     @SuppressWarnings("unchecked")
     private static ClassOrInterfaceDeclaration analyzeClass(CompilationUnit cu, JSONObject config) {
-    	if (config.get("name") == null) {
+        if (config.get("name") == null) {
             System.out.println("Problem - Config: Object of `requiredClass` must contain `name` property");
             return null;
         }
@@ -268,10 +268,9 @@ public class Analyzer {
         }
         return false;
     }
-    
-    private static int countClasses (CompilationUnit cu) {
-        return (int) cu.findAll(ClassOrInterfaceDeclaration.class).stream()
-        .count();
+
+    private static int countClasses(CompilationUnit cu) {
+        return (int) cu.findAll(ClassOrInterfaceDeclaration.class).stream().count();
     }
 
     private static boolean isContain(String source, String subItem) {
@@ -338,8 +337,8 @@ public class Analyzer {
                 checkMethodAccessModifier(methodDeclaration, methodConfig);
                 checkMethodOtherModifier(methodDeclaration, methodConfig);
                 checkMethodAnnotation(methodDeclaration, methodConfig);
-                checkMethodCalls (methodDeclaration, methodConfig, cd.getNameAsString());
-                checkMethodConstructs (methodDeclaration, methodConfig);
+                checkMethodCalls(methodDeclaration, methodConfig, cd.getNameAsString());
+                checkMethodConstructs(methodDeclaration, methodConfig);
                 checkOperators(methodDeclaration, methodConfig);
             }
         }
@@ -348,18 +347,18 @@ public class Analyzer {
     private static MethodDeclaration checkMethodSignature(ClassOrInterfaceDeclaration cd, JSONObject methodConfig) {
         MethodDeclaration methodDeclaration = checkMethodName(cd, methodConfig);
         if (methodDeclaration != null) {
-        	int successCounter = 0;
-            if (checkMethodReturnType(methodDeclaration, methodConfig) ) {
-            	successCounter++ ; 
+            int successCounter = 0;
+            if (checkMethodReturnType(methodDeclaration, methodConfig)) {
+                successCounter++;
             }
             if (checkMethodParameters(methodDeclaration, methodConfig)) {
-            	successCounter++ ; 
+                successCounter++;
             }
-            if ( successCounter == 2 ) {
-            	return methodDeclaration;
+            if (successCounter == 2) {
+                return methodDeclaration;
             }
         }
-        	return null; 
+        return null;
     }
 
     private static MethodDeclaration checkMethodName(ClassOrInterfaceDeclaration cd, JSONObject methodConfig) {
@@ -485,8 +484,9 @@ public class Analyzer {
         }
     }
 
-    private static void checkMethodCalls (MethodDeclaration methodDeclaration, JSONObject methodConfig, String currentClassName) {
-    	JSONArray methodCallsConfig = (JSONArray) methodConfig.get("methodCalls");
+    private static void checkMethodCalls(MethodDeclaration methodDeclaration, JSONObject methodConfig,
+            String currentClassName) {
+        JSONArray methodCallsConfig = (JSONArray) methodConfig.get("methodCalls");
         for (int j = 0; methodCallsConfig != null && j < methodCallsConfig.size(); j++) {
             JSONObject methodCallConfig = (JSONObject) methodCallsConfig.get(j);
             JSONObject required = new JSONObject();
@@ -494,13 +494,13 @@ public class Analyzer {
                 System.out.println("Problem: Objects of `methodCalls` array must contain `className` property");
                 return;
             }
-            String className =  methodCallConfig.get("className").toString();
+            String className = methodCallConfig.get("className").toString();
             required.put("className", className);
 
-            Boolean isCurrentClass = ( (currentClassName.equalsIgnoreCase(className)) || 
-            		className.isEmpty() || className.equalsIgnoreCase("this") );
-            required.put("isCurrentClass", isCurrentClass );
-            
+            Boolean isCurrentClass = ((currentClassName.equalsIgnoreCase(className)) || className.isEmpty()
+                    || className.equalsIgnoreCase("this"));
+            required.put("isCurrentClass", isCurrentClass);
+
             if (methodCallConfig.containsKey("methodName")) {
                 required.put("methodName", methodCallConfig.get("methodName").toString());
             }
@@ -514,20 +514,20 @@ public class Analyzer {
 
             VoidVisitor<JSONObject> methodCallsExprTester = new MethodCallsExprTester();
             methodCallsExprTester.visit(methodDeclaration, required);
-            
+
             if (required.get("success") == null) {
                 if (requirement) {
                     required.put("success", false);
-                    required.put("errorCode", 272 ); // Required Method but not found
+                    required.put("errorCode", 272); // Required Method but not found
                 } else {
                     required.put("success", true);
                     required.put("errorCode", 0);
                 }
             }
-//            displayResult(required);
+            // displayResult(required);
         }
     }
-    
+
     private static void checkOperators(MethodDeclaration methodDeclaration, JSONObject methodConfig) {
         JSONArray operatorsConfig = (JSONArray) methodConfig.get("operators");
         for (int j = 0; operatorsConfig != null && j < operatorsConfig.size(); j++) {
@@ -545,12 +545,11 @@ public class Analyzer {
             if (operatorConfig.containsKey("level")) {
                 level = (long) operatorConfig.get("level");
             }
-            
+
             required.put("level", level);
             required.put("operatorName", operatorConfig.get("name").toString());
             required.put("forbidden", forbidden);
-            
-            
+
             VoidVisitor<JSONObject> methodOperatorsTester = new MethodOperatorsTester();
             methodOperatorsTester.visit(methodDeclaration, required);
         }
@@ -610,12 +609,12 @@ public class Analyzer {
     }
 
     private static void checkMethodConstructs(MethodDeclaration methodDeclaration, JSONObject methodConfig) {
-        
-    	Optional<BlockStmt> codeBlock = methodDeclaration.getBody();
+
+        Optional<BlockStmt> codeBlock = methodDeclaration.getBody();
         if (codeBlock.isPresent()) {
             JSONArray requiredConstructs = (JSONArray) methodConfig.get("constructs");
-            if ( requiredConstructs != null) {
-            	JSONObject required = new JSONObject();
+            if (requiredConstructs != null) {
+                JSONObject required = new JSONObject();
                 for (int j = 0; j < requiredConstructs.size(); j++) {
                     JSONObject requiredConstruct = (JSONObject) requiredConstructs.get(j);
                     if (!requiredConstruct.containsKey("name")) {
@@ -639,7 +638,7 @@ public class Analyzer {
                     required.put("requirement", requirement);
 
                     VoidVisitor<JSONObject> methodConstructTester = new MethodConstructTester();
-                    methodConstructTester.visit(codeBlock.get().asBlockStmt() , required);
+                    methodConstructTester.visit(codeBlock.get().asBlockStmt(), required);
 
                     if (required.get("success") == null) {
                         if (requirement) {
@@ -653,7 +652,7 @@ public class Analyzer {
                     displayResult(required);
                 }
             }
-    	}
+        }
     }
 
     private static void displayResult(JSONObject result) {
@@ -673,7 +672,6 @@ public class Analyzer {
 
     }
 
-    
     // Overriding Visit Methods
 
     private static class MethodNameTester extends VoidVisitorAdapter<JSONObject> {
@@ -781,14 +779,14 @@ public class Analyzer {
             } else if (accessModifierFound && forbidden) {
                 jobject.put("success", false);
                 jobject.put("errorCode", 240);
-                jobject.put("range", md.getRange().get() );
+                jobject.put("range", md.getRange().get());
                 System.out.println("Forbidden access modifier `" + expectedModifier + "` is present");
                 // problems.add(new Problem("Forbidden access modifier `" + expectedModifier +
                 // "` is present", md.getRange().get()));
             } else {
                 jobject.put("success", false);
                 jobject.put("errorCode", 241);
-                jobject.put("range", md.getRange().get() );
+                jobject.put("range", md.getRange().get());
                 System.out.println("Required access modifier `" + expectedModifier + "` is not present");
                 // problems.add(new Problem("Required access modifier `" + expectedModifier + "`
                 // is not present", md.getRange().get()));
@@ -827,14 +825,14 @@ public class Analyzer {
             } else if (modifierFound && forbidden) {
                 jobject.put("success", false);
                 jobject.put("errorCode", 250);
-                jobject.put("range", md.getRange().get() );
+                jobject.put("range", md.getRange().get());
                 System.out.println("Forbidden modifier `" + expectedModifier + "` is present");
                 // problems.add(new Problem("Forbidden modifier `" + expectedModifier + "` is
                 // present", md.getRange().get()));
             } else {
                 jobject.put("success", false);
                 jobject.put("errorCode", 251);
-                jobject.put("range", md.getRange().get() );
+                jobject.put("range", md.getRange().get());
                 System.out.println("Required modifier `" + expectedModifier + "` is not present");
                 // problems.add(new Problem("Required modifier `" + expectedModifier + "` is not
                 // present", md.getRange().get()));
@@ -867,14 +865,14 @@ public class Analyzer {
             } else if (annotationFound && forbidden) {
                 jobject.put("success", false);
                 jobject.put("errorCode", 260);
-                jobject.put("range", md.getRange().get() );
+                jobject.put("range", md.getRange().get());
                 System.out.println("Forbidden annotation `" + annotationExpected + "` is present");
                 // problems.add(new Problem("Forbidden annotation `" + annotationExpected + "`
                 // is present", md.getRange().get()));
             } else {
                 jobject.put("success", false);
                 jobject.put("errorCode", 261);
-                jobject.put("range", md.getRange().get() );
+                jobject.put("range", md.getRange().get());
                 System.out.println("Required annotation `" + annotationExpected + "` is not present");
                 // problems.add(new Problem("Required annotation `" + annotationExpected + "` is
                 // not present", md.getRange().get()));
@@ -1005,7 +1003,6 @@ public class Analyzer {
         }
     }
 
-    
     @Deprecated
     private static class MethodCallExprTester extends VoidVisitorAdapter<JSONObject> {
 
@@ -1048,92 +1045,93 @@ public class Analyzer {
 
         }
     }
-    
-    
+
     private static class MethodCallsExprTester extends VoidVisitorAdapter<JSONObject> {
 
         @Override
         public void visit(MethodCallExpr methodCallExpr, JSONObject jobject) {
             super.visit(methodCallExpr, jobject);
-//            if (jobject.containsKey("success") && (Boolean) jobject.get("success")) {
-//                    return;
-//            }
-                Boolean requirement = (Boolean) jobject.get("requirement");
-                Boolean isCurrentClass = (Boolean) jobject.get("isCurrentClass");
-                String requiredClassName = jobject.get("className").toString();
-                String requiredMethodName = null;
-                
-                String scope = "";
-                if ( methodCallExpr.getScope().isPresent() ) {
-                    scope = methodCallExpr.getScope().get().toString();
-                }
-//                 System.out.println("Scope: " + scope+ requiredClassName);
-                
-                if ( (( scope.isEmpty() || scope.equals("this") ) && isCurrentClass ) // Current Class
-                		||
-                		scope.equals(requiredClassName) ) {  // Class name
-                	if ( jobject.containsKey("methodName") ) {
-                    	requiredMethodName = jobject.get("methodName").toString();
-                    	
-                    	if ((requiredMethodName.equals(methodCallExpr.getNameAsString()))) {
-                    		if (requirement) {
-                                jobject.put("success", true);
-                                jobject.put("errorCode", 0);
-                                jobject.put("range", methodCallExpr.getRange().get());
-                            } else {
-                                jobject.put("success", false);
-                                jobject.put("errorCode", 273); 
-                                jobject.put("range", methodCallExpr.getRange().get());
-                                jobject.put("cu", Optional.empty());
-                                System.out.println("Forbidden Method Call" + (requiredMethodName != null ? " `"+requiredMethodName+"`" : "") + " is found at: "+ methodCallExpr.getRange().get().begin);
+            // if (jobject.containsKey("success") && (Boolean) jobject.get("success")) {
+            // return;
+            // }
+            Boolean requirement = (Boolean) jobject.get("requirement");
+            Boolean isCurrentClass = (Boolean) jobject.get("isCurrentClass");
+            String requiredClassName = jobject.get("className").toString();
+            String requiredMethodName = null;
 
-                            }
-                        } else {
-                        	if (requirement) {
-                        		jobject.put("success", false);
-                                jobject.put("errorCode", 272); 
-                                System.out.println("Required Method Call `" + requiredMethodName + "` is not present");
-//                                jobject.put("range", methodCallExpr.getRange().get());
-//                                jobject.put("cu", Optional.empty());
-                            } else {
-                            	jobject.put("success", true);
-                                jobject.put("errorCode", 0);
-                                jobject.put("range", methodCallExpr.getRange().get());
-                            }
-                        }
-                    } else {
-                    	
-                    	if (requirement) {
+            String scope = "";
+            if (methodCallExpr.getScope().isPresent()) {
+                scope = methodCallExpr.getScope().get().toString();
+            }
+            // System.out.println("Scope: " + scope+ requiredClassName);
+
+            if (((scope.isEmpty() || scope.equals("this")) && isCurrentClass) // Current Class
+                    || scope.equals(requiredClassName)) { // Class name
+                if (jobject.containsKey("methodName")) {
+                    requiredMethodName = jobject.get("methodName").toString();
+
+                    if ((requiredMethodName.equals(methodCallExpr.getNameAsString()))) {
+                        if (requirement) {
                             jobject.put("success", true);
                             jobject.put("errorCode", 0);
                             jobject.put("range", methodCallExpr.getRange().get());
                         } else {
                             jobject.put("success", false);
-                            jobject.put("errorCode", 273); 
+                            jobject.put("errorCode", 273);
                             jobject.put("range", methodCallExpr.getRange().get());
                             jobject.put("cu", Optional.empty());
-                            System.out.println("Forbidden Method Call" + (requiredMethodName != null ? " `"+requiredMethodName+"`" : "") + " is found at: "+ methodCallExpr.getRange().get().begin);
+                            System.out.println("Forbidden Method Call"
+                                    + (requiredMethodName != null ? " `" + requiredMethodName + "`" : "")
+                                    + " is found at: " + methodCallExpr.getRange().get().begin);
 
+                        }
+                    } else {
+                        if (requirement) {
+                            jobject.put("success", false);
+                            jobject.put("errorCode", 272);
+                            System.out.println("Required Method Call `" + requiredMethodName + "` is not present");
+                            // jobject.put("range", methodCallExpr.getRange().get());
+                            // jobject.put("cu", Optional.empty());
+                        } else {
+                            jobject.put("success", true);
+                            jobject.put("errorCode", 0);
+                            jobject.put("range", methodCallExpr.getRange().get());
                         }
                     }
                 } else {
-                	
-                	if (!requirement) {
+
+                    if (requirement) {
                         jobject.put("success", true);
                         jobject.put("errorCode", 0);
                         jobject.put("range", methodCallExpr.getRange().get());
                     } else {
                         jobject.put("success", false);
-                        jobject.put("errorCode", 272);
-                        System.out.println("Required Method Call `" + requiredMethodName + "` is not present");
+                        jobject.put("errorCode", 273);
+                        jobject.put("range", methodCallExpr.getRange().get());
+                        jobject.put("cu", Optional.empty());
+                        System.out.println("Forbidden Method Call"
+                                + (requiredMethodName != null ? " `" + requiredMethodName + "`" : "") + " is found at: "
+                                + methodCallExpr.getRange().get().begin);
 
-//                        jobject.put("range", methodCallExpr.getRange().get());
-//                        jobject.put("cu", Optional.empty());
                     }
                 }
+            } else {
+
+                if (!requirement) {
+                    jobject.put("success", true);
+                    jobject.put("errorCode", 0);
+                    jobject.put("range", methodCallExpr.getRange().get());
+                } else {
+                    jobject.put("success", false);
+                    jobject.put("errorCode", 272);
+                    System.out.println("Required Method Call `" + requiredMethodName + "` is not present");
+
+                    // jobject.put("range", methodCallExpr.getRange().get());
+                    // jobject.put("cu", Optional.empty());
+                }
+            }
         }
     }
-    
 
     private static class MethodConstructTester extends VoidVisitorAdapter<JSONObject> {
 

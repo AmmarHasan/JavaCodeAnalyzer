@@ -897,6 +897,10 @@ public class Analyzer {
             Boolean operatorFound = false;
 
             List<BinaryExpr> binaryOperatorExpressions = methodDeclaration.getChildNodesByType(BinaryExpr.class);
+            if (binaryOperatorExpressions.size() == 0) {
+                System.out.println("Required operator `" + operatorExpected + "` is not present "
+                        + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
+            }
             for (BinaryExpr binaryOperatorExpression : binaryOperatorExpressions) {
                 if (binaryOperatorExpression.getOperator().asString().equals(operatorExpected)) {
                     Optional<Node> pn = binaryOperatorExpression.getAncestorOfType(BlockStmt.class).get()
@@ -925,7 +929,7 @@ public class Analyzer {
                     } else {
                         jobject.put("success", false);
                         jobject.put("errorCode", 311);
-                        System.out.println("Required operator `" + operatorExpected + "` is not present "
+                        System.out.println("Required operator `" + operatorExpected + "` is present but not "
                                 + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
                         jobject.put("range", binaryOperatorExpression.getRange().get());
                         // problems.add(new Problem("Required operator `" + operatorExpected + "` is not
@@ -934,7 +938,12 @@ public class Analyzer {
                     displayResult(jobject);
                 }
             }
+
             List<UnaryExpr> unaryOperatorExpressions = methodDeclaration.getChildNodesByType(UnaryExpr.class);
+            if (unaryOperatorExpressions.size() == 0) {
+                System.out.println("Required operator `" + operatorExpected + "` is not present "
+                        + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
+            }
             for (UnaryExpr unaryOperatorExpression : unaryOperatorExpressions) {
                 if (unaryOperatorExpression.getOperator().asString().equals(operatorExpected)) {
                     Optional<Node> pn = unaryOperatorExpression.getAncestorOfType(BlockStmt.class).get()
@@ -960,15 +969,20 @@ public class Analyzer {
                     } else {
                         jobject.put("success", false);
                         jobject.put("errorCode", 311);
-                        System.out.println("Required operator `" + operatorExpected + "` is not present "
+                        System.out.println("Required operator `" + operatorExpected + "` is present but not "
                                 + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
                         jobject.put("range", unaryOperatorExpression.getRange().get());
                     }
                     displayResult(jobject);
                 }
             }
+
             List<ConditionalExpr> conditionalOperatorExpressions = methodDeclaration
                     .getChildNodesByType(ConditionalExpr.class);
+            if (conditionalOperatorExpressions.size() == 0) {
+                System.out.println("Required operator `" + operatorExpected + "` is not present "
+                        + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
+            }
             for (ConditionalExpr conditionalOperatorExpression : conditionalOperatorExpressions) {
                 if (operatorExpected.equals("?")) {
                     Optional<Node> pn = conditionalOperatorExpression.getAncestorOfType(BlockStmt.class).get()
@@ -993,7 +1007,7 @@ public class Analyzer {
                     } else {
                         jobject.put("success", false);
                         jobject.put("errorCode", 311);
-                        System.out.println("Required operator `" + operatorExpected + "` is not present "
+                        System.out.println("Required operator `" + operatorExpected + "` is present but not "
                                 + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
                         jobject.put("range", conditionalOperatorExpression.getRange().get());
                     }

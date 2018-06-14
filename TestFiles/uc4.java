@@ -3,17 +3,19 @@
 // simple mutlplication of two +ve number without using * or Math.multiplyFull method.
 // Method signature is given and call to other user defined method is restricted
 
-//public class DemoMath {
-//	@override
-//    public static long multiply (int a, long b) {
-//      long result = 0;
-//      for (int i=0; i < a; i++) {
-//        result += b;
-//        if(true) {}
-//      }
-//      return b;
-//    }
-//}
+public class DemoMath {
+	@override
+   public static long multiply (int a, int b) {
+     long result = 0;
+     result = result + 10;
+     result = result + 10;
+
+     for (int i=0; i < a; i++) {
+       if(true) {}
+     }
+     return b;
+   }
+}
 
 
 /* Following examples will result in error */
@@ -26,14 +28,14 @@
 // }
 
 // Problems: using forbidden builtin method
- public class DemoMath {
-     public static long multiply(int a, int b) {
-       for (int i=0; i < 2; i++) {}
-       Math.abs(-5);
-//       Math.multiplyFull(a, b);
-       return 1;//
-     }
- }
+// public class DemoMath {
+//      public static long multiply(int a, int b) {
+//        for (int i=0; i < 2; i++) {}
+//        Math.abs(-5);
+// //       Math.multiplyFull(a, b);
+//        return 1;//
+//      }
+//  }
 
 // Problems: implementing in user defined method
 // public class DemoMath {

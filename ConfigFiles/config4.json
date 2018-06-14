@@ -16,17 +16,17 @@
         "annotations": [
         	{ "name": "override" }
         ],
-        
+
         "return": "long",
         "parameters": [ "int" ,"int" ],
-        "methodCalls": [ 
-        				{ 
+        "methodCalls": [
+        				{
         					"className": "Math",
-        					"methodName" : "multiplyFull" , 
+        					"methodName" : "multiplyFull" ,
         					"forbidden": true
-        				},{ 
+        				},{
         					"className": "Math",
-        					"methodName" : "abs" , 
+        					"methodName" : "abs" ,
         					"forbidden": true
         				}
         			],
@@ -36,8 +36,7 @@
             "level": 1
           },
           {
-            "name": "+",
-            "level": 2
+            "name": "+"
           },
           {
             "name": "?",

@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.Range;
 import com.github.javaparser.ast.AccessSpecifier;
 import com.github.javaparser.ast.CompilationUnit;
@@ -25,7 +26,6 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.BinaryExpr;
 import com.github.javaparser.ast.expr.ConditionalExpr;
-import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.UnaryExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
@@ -33,6 +33,9 @@ import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.visitor.VoidVisitor;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import com.github.javaparser.printer.JsonPrinter;
+import com.github.javaparser.symbolsolver.JavaSymbolSolver;
+import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
+import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -44,6 +47,10 @@ public class Analyzer {
 
         JSONObject config = Analyzer.parseConfigFile(configFilePath);
         FileInputStream fileInputStream = getFileInputStream(javaFilePath);
+        CombinedTypeSolver localCts = new CombinedTypeSolver();
+		localCts.add(new ReflectionTypeSolver());
+		ParserConfiguration parserConfiguration = new ParserConfiguration().setSymbolResolver(new JavaSymbolSolver(localCts));
+		JavaParser.setStaticConfiguration(parserConfiguration);
         CompilationUnit cu = JavaParser.parse(fileInputStream);
 
         checkClassCount(cu, config);
@@ -75,6 +82,8 @@ public class Analyzer {
 
     // Class Parsing Methods
 
+    private static String currentClassName = new String();
+    
     @SuppressWarnings("unchecked")
     private static ClassOrInterfaceDeclaration analyzeClass(CompilationUnit cu, JSONObject config) {
         if (config.get("name") == null) {
@@ -87,6 +96,7 @@ public class Analyzer {
         Stream<ClassOrInterfaceDeclaration> stream_Class = getFilteredClassStream(cu, req_ClassName);
 
         if (checkForClass(stream_Class)) {
+        	currentClassName = req_ClassName;
             stream_Class = getFilteredClassStream(cu, req_ClassName);
             ClassOrInterfaceDeclaration classNode = stream_Class.findFirst().get();
             // System.out.println("Found Class: " + classNode.getNameAsString());
@@ -337,9 +347,10 @@ public class Analyzer {
                 checkMethodAccessModifier(methodDeclaration, methodConfig);
                 checkMethodOtherModifier(methodDeclaration, methodConfig);
                 checkMethodAnnotation(methodDeclaration, methodConfig);
-                checkMethodCalls(methodDeclaration, methodConfig, cd.getNameAsString());
-                checkMethodConstructs(methodDeclaration, methodConfig);
-                checkOperators(methodDeclaration, methodConfig);
+                checkMethodCalls(methodDeclaration.getBody().get(), methodConfig, "Method");
+                checkMethodConstructs(methodDeclaration.getBody().get(), methodConfig, "Method");
+                
+//                checkOperators(methodDeclaration, methodConfig);
             }
         }
     }
@@ -484,48 +495,55 @@ public class Analyzer {
         }
     }
 
-    private static void checkMethodCalls(MethodDeclaration methodDeclaration, JSONObject methodConfig,
-            String currentClassName) {
-        JSONArray methodCallsConfig = (JSONArray) methodConfig.get("methodCalls");
-        for (int j = 0; methodCallsConfig != null && j < methodCallsConfig.size(); j++) {
-            JSONObject methodCallConfig = (JSONObject) methodCallsConfig.get(j);
-            JSONObject required = new JSONObject();
-            if (!methodCallConfig.containsKey("className")) {
-                System.out.println("Problem: Objects of `methodCalls` array must contain `className` property");
-                return;
-            }
-            String className = methodCallConfig.get("className").toString();
-            required.put("className", className);
-
-            Boolean isCurrentClass = ((currentClassName.equalsIgnoreCase(className)) || className.isEmpty()
-                    || className.equalsIgnoreCase("this"));
-            required.put("isCurrentClass", isCurrentClass);
-
-            if (methodCallConfig.containsKey("methodName")) {
-                required.put("methodName", methodCallConfig.get("methodName").toString());
-            }
-            Boolean requirement = true;
-            if (methodCallConfig.containsKey("forbidden")) {
-                if ((Boolean) methodCallConfig.get("forbidden")) {
-                    requirement = false;
-                }
-            }
-            required.put("requirement", requirement);
-
-            VoidVisitor<JSONObject> methodCallsExprTester = new MethodCallsExprTester();
-            methodCallsExprTester.visit(methodDeclaration, required);
-
-            if (required.get("success") == null) {
-                if (requirement) {
-                    required.put("success", false);
-                    required.put("errorCode", 272); // Required Method but not found
-                } else {
-                    required.put("success", true);
-                    required.put("errorCode", 0);
-                }
-            }
-            // displayResult(required);
-        }
+    private static void checkMethodCalls( BlockStmt codeBlock, JSONObject methodConfig, String context) {
+    	
+	        JSONArray methodCallsConfig = (JSONArray) methodConfig.get("methodCalls");
+	        for (int j = 0; methodCallsConfig != null && j < methodCallsConfig.size(); j++) {
+	            JSONObject methodCallConfig = (JSONObject) methodCallsConfig.get(j);
+	            JSONObject required = new JSONObject();
+	            if (!methodCallConfig.containsKey("className")) {
+	                System.out.println("Problem: Objects of `methodCalls` array must contain `className` property");
+	                return;
+	            }
+	            String className = methodCallConfig.get("className").toString();
+	            required.put("className", className);
+	
+	            Boolean isCurrentClass = ((currentClassName.equalsIgnoreCase(className)) || className.isEmpty()
+	                    || className.equalsIgnoreCase("this"));
+	            required.put("isCurrentClass", isCurrentClass);
+	
+	            if (methodCallConfig.containsKey("methodName")) {
+	                required.put("methodName", methodCallConfig.get("methodName").toString());
+	            }
+	            Boolean requirement = true;
+	            if (methodCallConfig.containsKey("forbidden")) {
+	                if ((Boolean) methodCallConfig.get("forbidden")) {
+	                    requirement = false;
+	                }
+	            }
+	            required.put("requirement", requirement);
+	            required.put("context", context);
+	
+	            VoidVisitor<JSONObject> methodCallsExprTester = new MethodCallsExprTester();
+	            methodCallsExprTester.visit(codeBlock, required);
+	
+	            if (required.get("success") == null) {
+	                if (requirement) {
+	                    required.put("success", false);
+	                    required.put("errorCode", 272); // Required Method but not found
+	                    System.out.println("Required Method Call is not present" + " - Context: "+ context);
+	                } else {
+	                    required.put("success", true);
+	                    required.put("errorCode", 0);
+	                }
+	            } else if ( (int) required.get("errorCode") == 272) {
+//	            	if (jobject.containsKey("methodName")) {
+//                        requiredMethodName = jobject.get("methodName").toString();
+//                        }
+	            	System.out.println("Required Method Call "+ ( (required.containsKey("methodName"))? "'" +required.get("methodName").toString()+ "' " : "" )+"is not present" + " - Context: "+ context);
+	            }
+	            // displayResult(required);
+	        }
     }
 
     private static void checkOperators(MethodDeclaration methodDeclaration, JSONObject methodConfig) {
@@ -608,52 +626,54 @@ public class Analyzer {
         return (Boolean) required.get("success");
     }
 
-    private static void checkMethodConstructs(MethodDeclaration methodDeclaration, JSONObject methodConfig) {
+    private static void checkMethodConstructs( BlockStmt codeBlock, JSONObject methodConfig, String context) {
 
-        Optional<BlockStmt> codeBlock = methodDeclaration.getBody();
-        if (codeBlock.isPresent()) {
-            JSONArray requiredConstructs = (JSONArray) methodConfig.get("constructs");
-            if (requiredConstructs != null) {
-                JSONObject required = new JSONObject();
-                for (int j = 0; j < requiredConstructs.size(); j++) {
-                    JSONObject requiredConstruct = (JSONObject) requiredConstructs.get(j);
-                    if (!requiredConstruct.containsKey("name")) {
-                        System.out.println("Problem: Objects of `constructs` array must contain `name` property");
-                        continue;
-                    }
-                    String requiredConstructName = requiredConstruct.get("name").toString();
-                    Long requiredLevel = (long) -1;
-                    if (requiredConstruct.containsKey("level")) {
-                        requiredLevel = (long) requiredConstruct.get("level");
-                    }
-                    Boolean requirement = true;
-                    if (requiredConstruct.containsKey("forbidden")) {
-                        if ((Boolean) requiredConstruct.get("forbidden")) {
-                            requirement = false;
-                        }
-                    }
-
-                    required.put("requiredConstructName", requiredConstructName);
-                    required.put("requiredLevel", requiredLevel);
-                    required.put("requirement", requirement);
-
-                    VoidVisitor<JSONObject> methodConstructTester = new MethodConstructTester();
-                    methodConstructTester.visit(codeBlock.get().asBlockStmt(), required);
-
-                    if (required.get("success") == null) {
-                        if (requirement) {
-                            required.put("success", false);
-                            required.put("errorCode", 290);
-                        } else {
-                            required.put("success", true);
-                            required.put("errorCode", 0);
-                        }
-                    }
-                    displayResult(required);
+        JSONArray requiredConstructs = (JSONArray) methodConfig.get("constructs");
+        if (requiredConstructs != null) {
+            JSONObject required = new JSONObject();
+            for (int j = 0; j < requiredConstructs.size(); j++) {
+                JSONObject requiredConstruct = (JSONObject) requiredConstructs.get(j);
+                if (!requiredConstruct.containsKey("name")) {
+                    System.out.println("Problem: Objects of `constructs` array must contain `name` property");
+                    continue;
                 }
+                String requiredConstructName = requiredConstruct.get("name").toString();
+                Long requiredLevel = (long) -1;
+                if (requiredConstruct.containsKey("level")) {
+                    requiredLevel = (long) requiredConstruct.get("level");
+                }
+                Boolean requirement = true;
+                if (requiredConstruct.containsKey("forbidden")) {
+                    if ((Boolean) requiredConstruct.get("forbidden")) {
+                        requirement = false;
+                    }
+                }
+
+                required.put("requiredConstructName", requiredConstructName);
+                required.put("requiredLevel", requiredLevel);
+                required.put("requirement", requirement);
+                required.put("requiredConstruct", requiredConstruct);
+                required.put("context", context);
+
+                VoidVisitor<JSONObject> methodConstructTester = new MethodConstructTester();
+                methodConstructTester.visit(codeBlock.asBlockStmt(), required);
+
+                if (required.get("success") == null) {
+                    if (requirement) {
+                        required.put("success", false);
+                        required.put("errorCode", 290);
+                        System.out.println("Required Construct not found" + " - Context: "+ context);
+                    } else {
+                        required.put("success", true);
+                        required.put("errorCode", 0);
+                    }
+                }
+//                displayResult(required);
             }
         }
+    
     }
+    
 
     private static void displayResult(JSONObject result) {
         if (!(Boolean) result.get("success")) {
@@ -1065,25 +1085,39 @@ public class Analyzer {
         @Override
         public void visit(MethodCallExpr methodCallExpr, JSONObject jobject) {
             super.visit(methodCallExpr, jobject);
-            // if (jobject.containsKey("success") && (Boolean) jobject.get("success")) {
-            // return;
-            // }
             Boolean requirement = (Boolean) jobject.get("requirement");
+             if (jobject.containsKey("success") && (Boolean) jobject.get("success") && requirement) {
+             return;
+             }
+            
             Boolean isCurrentClass = (Boolean) jobject.get("isCurrentClass");
             String requiredClassName = jobject.get("className").toString();
+            String context = jobject.get("context").toString();
             String requiredMethodName = null;
 
-            String scope = "";
+            String callerName = "";
             if (methodCallExpr.getScope().isPresent()) {
-                scope = methodCallExpr.getScope().get().toString();
+            	if ( methodCallExpr.getScope().get().isNameExpr() ) {
+            		try {
+            			callerName = methodCallExpr.getScope().get().asNameExpr().resolve().getType().asReferenceType().getQualifiedName();
+                        callerName = callerName.lastIndexOf('.') != -1 ? (callerName.substring( callerName.lastIndexOf('.')+1  , callerName.length())) : callerName;
+					} catch (Exception e) {
+						callerName = methodCallExpr.getScope().get().toString();
+					}
+            	} else {
+            		callerName = methodCallExpr.getScope().get().toString();
+            	}
             }
-            // System.out.println("Scope: " + scope+ requiredClassName);
-
-            if (((scope.isEmpty() || scope.equals("this")) && isCurrentClass) // Current Class
-                    || scope.equals(requiredClassName)) { // Class name
+            
+//            methodCallExpr.
+//            System.out.println(callerName);
+            
+            if (((callerName.isEmpty() || callerName.equals("this")) && isCurrentClass) // Current Class
+                    || callerName.equals(requiredClassName)) { // Class name
                 if (jobject.containsKey("methodName")) {
                     requiredMethodName = jobject.get("methodName").toString();
 
+//                    System.out.println("r: "+requiredMethodName+" p: "+methodCallExpr.getNameAsString());
                     if ((requiredMethodName.equals(methodCallExpr.getNameAsString()))) {
                         if (requirement) {
                             jobject.put("success", true);
@@ -1095,15 +1129,15 @@ public class Analyzer {
                             jobject.put("range", methodCallExpr.getRange().get());
                             jobject.put("cu", Optional.empty());
                             System.out.println("Forbidden Method Call"
-                                    + (requiredMethodName != null ? " `" + requiredMethodName + "`" : "")
-                                    + " is found at: " + methodCallExpr.getRange().get().begin);
+                                    + (requiredMethodName != null ? " '" + requiredMethodName + "'" : "")
+                                    + " is found at: " + methodCallExpr.getRange().get().begin+ " - Context: "+ context);
 
                         }
                     } else {
                         if (requirement) {
                             jobject.put("success", false);
                             jobject.put("errorCode", 272);
-                            System.out.println("Required Method Call `" + requiredMethodName + "` is not present");
+//                            System.out.println("Required Method Call `" + requiredMethodName + "` is not present"+ " - Context: "+ context);
                             // jobject.put("range", methodCallExpr.getRange().get());
                             // jobject.put("cu", Optional.empty());
                         } else {
@@ -1124,8 +1158,8 @@ public class Analyzer {
                         jobject.put("range", methodCallExpr.getRange().get());
                         jobject.put("cu", Optional.empty());
                         System.out.println("Forbidden Method Call"
-                                + (requiredMethodName != null ? " `" + requiredMethodName + "`" : "") + " is found at: "
-                                + methodCallExpr.getRange().get().begin);
+                                + (requiredMethodName != null ? " '" + requiredMethodName + "'" : "") + " is found at: "
+                                + methodCallExpr.getRange().get().begin + " - Context: "+ context);
 
                     }
                 }
@@ -1136,10 +1170,12 @@ public class Analyzer {
                     jobject.put("errorCode", 0);
                     jobject.put("range", methodCallExpr.getRange().get());
                 } else {
+                	 if (jobject.containsKey("methodName")) {
+                         requiredMethodName = jobject.get("methodName").toString();
+                         }
                     jobject.put("success", false);
                     jobject.put("errorCode", 272);
-                    System.out.println("Required Method Call `" + requiredMethodName + "` is not present");
-
+//                    System.out.println("Required Method Callm `" + requiredMethodName + "` is not present"+ " - Context: "+ context);
                     // jobject.put("range", methodCallExpr.getRange().get());
                     // jobject.put("cu", Optional.empty());
                 }
@@ -1158,11 +1194,12 @@ public class Analyzer {
             Boolean requirement = (Boolean) jobject.get("requirement");
             String requiredConstructName = jobject.get("requiredConstructName").toString();
             Long requiredLevel = (Long) jobject.get("requiredLevel");
+            String context = jobject.get("context").toString();
             Boolean constructFound = false;
 
             int level = 0;
             Optional<Node> pn = blockStatement.getParentNode();
-            while (pn.isPresent() && !pn.get().getClass().getSimpleName().toString().equals("MethodDeclaration")) {
+            while (pn.isPresent() && !pn.get().getClass().getSimpleName().toString().contains(context) ){
                 pn = pn.get().getParentNode();
                 if (pn.get().getClass().getSimpleName().toString().equals("BlockStmt")) {
                     level++;
@@ -1175,9 +1212,14 @@ public class Analyzer {
             NodeList nodeList = blockStatement.getStatements();
             for (Object node : nodeList) {
                 String stmtSimpleName = node.getClass().getSimpleName().toString().replaceAll("Stmt", "");
+//                System.out.println("sn: " + stmtSimpleName +requiredConstructName);
                 if (stmtSimpleName.equalsIgnoreCase(requiredConstructName) && requiredLevel == level) {
                     constructFound = true;
                     Statement stmt = (Statement) node;
+
+//                    System.out.println("found");
+                    checkMethodCalls  (  getBlockStmt(stmt) ,(JSONObject) jobject.get("requiredConstruct") , stmtSimpleName);
+                    checkMethodConstructs (  getBlockStmt(stmt) ,(JSONObject) jobject.get("requiredConstruct") , stmtSimpleName);
                     jobject.put("range", stmt.getRange().get());
                 }
             }
@@ -1189,10 +1231,33 @@ public class Analyzer {
                 } else {
                     jobject.put("success", false);
                     jobject.put("errorCode", 291);
+                    System.out.println("Required Construct rules dont match" + "- Context: "+ context);
                 }
             }
         }
 
+    }
+    
+    private static BlockStmt getBlockStmt (Statement stmt) {
+    	if ( stmt.isBlockStmt() ) {
+    		return stmt.asBlockStmt();
+    	}
+    	if ( stmt.isForStmt() ) {
+    		return stmt.asForStmt().getBody().asBlockStmt();
+    	}
+    	if ( stmt.isIfStmt() ) {
+    		return stmt.asIfStmt().getThenStmt().asBlockStmt();
+    	}
+    	if ( stmt.isWhileStmt() ) {
+    		return stmt.asWhileStmt().getBody().asBlockStmt();
+    	}
+    	if ( stmt.isDoStmt() ) {
+    		return stmt.asDoStmt().getBody().asBlockStmt();
+    	}
+    	if ( stmt.isWhileStmt() ) {
+    		return stmt.asWhileStmt().getBody().asBlockStmt();
+    	}
+		return null;
     }
 
     // private static void putResult ( JSONObject result) {}

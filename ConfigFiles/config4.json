@@ -20,16 +20,16 @@
         "return": "long",
         "parameters": [ "int" ,"int" ],
         "methodCalls": [
-        				{
-        					"className": "Math",
-        					"methodName" : "multiplyFull" ,
-        					"forbidden": true
-        				},{
-        					"className": "Math",
-        					"methodName" : "abs" ,
-        					"forbidden": true
-        				}
-        			],
+        					{
+        						"className": "Math",
+        						"methodName" : "multiplyFull" ,
+        						"forbidden": true
+        					},{
+        						"className": "Math",
+        						"methodName" : "abs" ,
+        						"forbidden": true
+        					}
+        				],
         "operators": [
           {
             "name": "++",
@@ -43,7 +43,33 @@
             "forbidden": true
           }
         ],
-        "constructs": [ { "name": "for" ,"level" : 0 } ]
+        "constructs": [ { 
+        				"name": "for" ,
+        				"level" : 0 ,
+        				"methodCalls": [
+        					{
+        						"className": "Math",
+        						"methodName" : "multiplyFull" ,
+							    "forbidden": true
+        					},{
+        						"className": "Math",
+        						"methodName" : "abs" ,
+        						"forbidden": true
+        					}
+        				],
+        				"constructs": [ { 
+        								"name": "if" ,
+        								"level" : 0 ,
+        								"methodCalls": [ {
+							        						"className": "Math",
+							        						"methodName" : "multiplyFull" 
+							        					},{
+							        						"className": "Math",
+							        						"methodName" : "abs" ,
+							        						"forbidden": true
+							        					} ]
+        				} ]
+         } ]
       }
     ]
   }

@@ -6,14 +6,12 @@
 public class DemoMath {
 	@override
    public static long multiply (int a, int b) {
-     long result = 0;
-     result = result + 10;
-     result = result + 10;
-
-     for (int i=0; i < a; i++) {
-       if(true) {}
-     }
-     return b;
+    long result = 0;
+    for (int i=0; i < a; i++) {
+        result = result + b;
+        result = b<0 ? 1 : b;
+    }
+    return b;
    }
 }
 

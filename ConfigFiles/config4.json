@@ -32,18 +32,23 @@
         				],
         "operators": [
           {
-            "name": "++",
+            "name": "+",
             "level": 1
           },
           {
-            "name": "+"
+            "name": "++",
+            "level": 0
+          },
+          {
+            "name": "++",
+            "level": 2
           },
           {
             "name": "?",
             "forbidden": true
           }
         ],
-        "constructs": [ { 
+        "constructs": [ {
         				"name": "for" ,
         				"level" : 0 ,
         				"methodCalls": [
@@ -57,12 +62,12 @@
         						"forbidden": true
         					}
         				],
-        				"constructs": [ { 
+        				"constructs": [ {
         								"name": "if" ,
         								"level" : 0 ,
         								"methodCalls": [ {
 							        						"className": "Math",
-							        						"methodName" : "multiplyFull" 
+							        						"methodName" : "multiplyFull"
 							        					},{
 							        						"className": "Math",
 							        						"methodName" : "abs" ,

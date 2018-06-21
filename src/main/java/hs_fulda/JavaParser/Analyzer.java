@@ -13,6 +13,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.print.attribute.standard.JobName;
+
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.Range;
@@ -48,9 +50,10 @@ public class Analyzer {
         JSONObject config = Analyzer.parseConfigFile(configFilePath);
         FileInputStream fileInputStream = getFileInputStream(javaFilePath);
         CombinedTypeSolver localCts = new CombinedTypeSolver();
-		localCts.add(new ReflectionTypeSolver());
-		ParserConfiguration parserConfiguration = new ParserConfiguration().setSymbolResolver(new JavaSymbolSolver(localCts));
-		JavaParser.setStaticConfiguration(parserConfiguration);
+        localCts.add(new ReflectionTypeSolver());
+        ParserConfiguration parserConfiguration = new ParserConfiguration()
+                .setSymbolResolver(new JavaSymbolSolver(localCts));
+        JavaParser.setStaticConfiguration(parserConfiguration);
         CompilationUnit cu = JavaParser.parse(fileInputStream);
 
         checkClassCount(cu, config);
@@ -83,7 +86,7 @@ public class Analyzer {
     // Class Parsing Methods
 
     private static String currentClassName = new String();
-    
+
     @SuppressWarnings("unchecked")
     private static ClassOrInterfaceDeclaration analyzeClass(CompilationUnit cu, JSONObject config) {
         if (config.get("name") == null) {
@@ -96,7 +99,7 @@ public class Analyzer {
         Stream<ClassOrInterfaceDeclaration> stream_Class = getFilteredClassStream(cu, req_ClassName);
 
         if (checkForClass(stream_Class)) {
-        	currentClassName = req_ClassName;
+            currentClassName = req_ClassName;
             stream_Class = getFilteredClassStream(cu, req_ClassName);
             ClassOrInterfaceDeclaration classNode = stream_Class.findFirst().get();
             // System.out.println("Found Class: " + classNode.getNameAsString());
@@ -349,8 +352,7 @@ public class Analyzer {
                 checkMethodAnnotation(methodDeclaration, methodConfig);
                 checkMethodCalls(methodDeclaration.getBody().get(), methodConfig, "Method");
                 checkMethodConstructs(methodDeclaration.getBody().get(), methodConfig, "Method");
-                
-//                checkOperators(methodDeclaration, methodConfig);
+                checkOperators(methodDeclaration, methodConfig);
             }
         }
     }
@@ -495,55 +497,58 @@ public class Analyzer {
         }
     }
 
-    private static void checkMethodCalls( BlockStmt codeBlock, JSONObject methodConfig, String context) {
-    	
-	        JSONArray methodCallsConfig = (JSONArray) methodConfig.get("methodCalls");
-	        for (int j = 0; methodCallsConfig != null && j < methodCallsConfig.size(); j++) {
-	            JSONObject methodCallConfig = (JSONObject) methodCallsConfig.get(j);
-	            JSONObject required = new JSONObject();
-	            if (!methodCallConfig.containsKey("className")) {
-	                System.out.println("Problem: Objects of `methodCalls` array must contain `className` property");
-	                return;
-	            }
-	            String className = methodCallConfig.get("className").toString();
-	            required.put("className", className);
-	
-	            Boolean isCurrentClass = ((currentClassName.equalsIgnoreCase(className)) || className.isEmpty()
-	                    || className.equalsIgnoreCase("this"));
-	            required.put("isCurrentClass", isCurrentClass);
-	
-	            if (methodCallConfig.containsKey("methodName")) {
-	                required.put("methodName", methodCallConfig.get("methodName").toString());
-	            }
-	            Boolean requirement = true;
-	            if (methodCallConfig.containsKey("forbidden")) {
-	                if ((Boolean) methodCallConfig.get("forbidden")) {
-	                    requirement = false;
-	                }
-	            }
-	            required.put("requirement", requirement);
-	            required.put("context", context);
-	
-	            VoidVisitor<JSONObject> methodCallsExprTester = new MethodCallsExprTester();
-	            methodCallsExprTester.visit(codeBlock, required);
-	
-	            if (required.get("success") == null) {
-	                if (requirement) {
-	                    required.put("success", false);
-	                    required.put("errorCode", 272); // Required Method but not found
-	                    System.out.println("Required Method Call is not present" + " - Context: "+ context);
-	                } else {
-	                    required.put("success", true);
-	                    required.put("errorCode", 0);
-	                }
-	            } else if ( (int) required.get("errorCode") == 272) {
-//	            	if (jobject.containsKey("methodName")) {
-//                        requiredMethodName = jobject.get("methodName").toString();
-//                        }
-	            	System.out.println("Required Method Call "+ ( (required.containsKey("methodName"))? "'" +required.get("methodName").toString()+ "' " : "" )+"is not present" + " - Context: "+ context);
-	            }
-	            // displayResult(required);
-	        }
+    private static void checkMethodCalls(BlockStmt codeBlock, JSONObject methodConfig, String context) {
+
+        JSONArray methodCallsConfig = (JSONArray) methodConfig.get("methodCalls");
+        for (int j = 0; methodCallsConfig != null && j < methodCallsConfig.size(); j++) {
+            JSONObject methodCallConfig = (JSONObject) methodCallsConfig.get(j);
+            JSONObject required = new JSONObject();
+            if (!methodCallConfig.containsKey("className")) {
+                System.out.println("Problem: Objects of `methodCalls` array must contain `className` property");
+                return;
+            }
+            String className = methodCallConfig.get("className").toString();
+            required.put("className", className);
+
+            Boolean isCurrentClass = ((currentClassName.equalsIgnoreCase(className)) || className.isEmpty()
+                    || className.equalsIgnoreCase("this"));
+            required.put("isCurrentClass", isCurrentClass);
+
+            if (methodCallConfig.containsKey("methodName")) {
+                required.put("methodName", methodCallConfig.get("methodName").toString());
+            }
+            Boolean requirement = true;
+            if (methodCallConfig.containsKey("forbidden")) {
+                if ((Boolean) methodCallConfig.get("forbidden")) {
+                    requirement = false;
+                }
+            }
+            required.put("requirement", requirement);
+            required.put("context", context);
+
+            VoidVisitor<JSONObject> methodCallsExprTester = new MethodCallsExprTester();
+            methodCallsExprTester.visit(codeBlock, required);
+
+            if (required.get("success") == null) {
+                if (requirement) {
+                    required.put("success", false);
+                    required.put("errorCode", 272); // Required Method but not found
+                    System.out.println("Required Method Call is not present" + " - Context: " + context);
+                } else {
+                    required.put("success", true);
+                    required.put("errorCode", 0);
+                }
+            } else if ((int) required.get("errorCode") == 272) {
+                // if (jobject.containsKey("methodName")) {
+                // requiredMethodName = jobject.get("methodName").toString();
+                // }
+                System.out.println("Required Method Call "
+                        + ((required.containsKey("methodName")) ? "'" + required.get("methodName").toString() + "' "
+                                : "")
+                        + "is not present" + " - Context: " + context);
+            }
+            // displayResult(required);
+        }
     }
 
     private static void checkOperators(MethodDeclaration methodDeclaration, JSONObject methodConfig) {
@@ -626,7 +631,7 @@ public class Analyzer {
         return (Boolean) required.get("success");
     }
 
-    private static void checkMethodConstructs( BlockStmt codeBlock, JSONObject methodConfig, String context) {
+    private static void checkMethodConstructs(BlockStmt codeBlock, JSONObject methodConfig, String context) {
 
         JSONArray requiredConstructs = (JSONArray) methodConfig.get("constructs");
         if (requiredConstructs != null) {
@@ -662,18 +667,17 @@ public class Analyzer {
                     if (requirement) {
                         required.put("success", false);
                         required.put("errorCode", 290);
-                        System.out.println("Required Construct not found" + " - Context: "+ context);
+                        System.out.println("Required Construct not found" + " - Context: " + context);
                     } else {
                         required.put("success", true);
                         required.put("errorCode", 0);
                     }
                 }
-//                displayResult(required);
+                // displayResult(required);
             }
         }
-    
+
     }
-    
 
     private static void displayResult(JSONObject result) {
         if (!(Boolean) result.get("success")) {
@@ -911,20 +915,18 @@ public class Analyzer {
             }
 
             long requiredLevel = (long) jobject.get("level");
-            long level = 0;
+            int level = 0;
             Boolean forbidden = (Boolean) jobject.get("forbidden");
             String operatorExpected = jobject.get("operatorName").toString();
             Boolean operatorFound = false;
+            List<Boolean> requiredOperatorsFound = new ArrayList<Boolean>();
 
             List<BinaryExpr> binaryOperatorExpressions = methodDeclaration.getChildNodesByType(BinaryExpr.class);
-            if (binaryOperatorExpressions.size() == 0) {
-                System.out.println("Required operator `" + operatorExpected + "` is not present "
-                        + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
-            }
             for (BinaryExpr binaryOperatorExpression : binaryOperatorExpressions) {
                 if (binaryOperatorExpression.getOperator().asString().equals(operatorExpected)) {
                     Optional<Node> pn = binaryOperatorExpression.getAncestorOfType(BlockStmt.class).get()
                             .getParentNode();
+                    level = 0;
                     while (pn.isPresent()
                             && !pn.get().getClass().getSimpleName().toString().equals("MethodDeclaration")) {
                         pn = pn.get().getParentNode();
@@ -932,42 +934,32 @@ public class Analyzer {
                             level++;
                         }
                     }
-                    // if (requiredLevel == -1) { requiredLevel = level; }
                     operatorFound = binaryOperatorExpression.getOperator().asString().equals(operatorExpected)
                             && (requiredLevel == -1 || requiredLevel == level);
-
                     if ((operatorFound && !forbidden) || (!operatorFound && forbidden)) {
                         jobject.put("success", true);
+                        requiredOperatorsFound.add(true);
                     } else if (operatorFound && forbidden) {
                         jobject.put("success", false);
                         jobject.put("errorCode", 310);
+                        requiredOperatorsFound.add(true);
                         System.out.println("Forbidden operator `" + operatorExpected + "` is present "
                                 + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
                         jobject.put("range", binaryOperatorExpression.getRange().get());
-                        // problems.add(new Problem("Forbidden operator `" + operatorExpected + "` is
-                        // present", md.getRange().get()));
+                        displayResult(jobject);
                     } else {
                         jobject.put("success", false);
                         jobject.put("errorCode", 311);
-                        System.out.println("Required operator `" + operatorExpected + "` is present but not "
-                                + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
-                        jobject.put("range", binaryOperatorExpression.getRange().get());
-                        // problems.add(new Problem("Required operator `" + operatorExpected + "` is not
-                        // present", md.getRange().get()));
                     }
-                    displayResult(jobject);
                 }
             }
 
             List<UnaryExpr> unaryOperatorExpressions = methodDeclaration.getChildNodesByType(UnaryExpr.class);
-            if (unaryOperatorExpressions.size() == 0) {
-                System.out.println("Required operator `" + operatorExpected + "` is not present "
-                        + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
-            }
             for (UnaryExpr unaryOperatorExpression : unaryOperatorExpressions) {
                 if (unaryOperatorExpression.getOperator().asString().equals(operatorExpected)) {
                     Optional<Node> pn = unaryOperatorExpression.getAncestorOfType(BlockStmt.class).get()
                             .getParentNode();
+                    level = 0;
                     while (pn.isPresent()
                             && !pn.get().getClass().getSimpleName().toString().equals("MethodDeclaration")) {
                         pn = pn.get().getParentNode();
@@ -980,33 +972,30 @@ public class Analyzer {
 
                     if ((operatorFound && !forbidden) || (!operatorFound && forbidden)) {
                         jobject.put("success", true);
+                        requiredOperatorsFound.add(true);
                     } else if (operatorFound && forbidden) {
                         jobject.put("success", false);
                         jobject.put("errorCode", 310);
+                        requiredOperatorsFound.add(true);
                         System.out.println("Forbidden operator `" + operatorExpected + "` is present "
                                 + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
                         jobject.put("range", unaryOperatorExpression.getRange().get());
+                        displayResult(jobject);
                     } else {
                         jobject.put("success", false);
                         jobject.put("errorCode", 311);
-                        System.out.println("Required operator `" + operatorExpected + "` is present but not "
-                                + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
-                        jobject.put("range", unaryOperatorExpression.getRange().get());
                     }
-                    displayResult(jobject);
                 }
             }
 
             List<ConditionalExpr> conditionalOperatorExpressions = methodDeclaration
                     .getChildNodesByType(ConditionalExpr.class);
-            if (conditionalOperatorExpressions.size() == 0) {
-                System.out.println("Required operator `" + operatorExpected + "` is not present "
-                        + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
-            }
+
             for (ConditionalExpr conditionalOperatorExpression : conditionalOperatorExpressions) {
                 if (operatorExpected.equals("?")) {
                     Optional<Node> pn = conditionalOperatorExpression.getAncestorOfType(BlockStmt.class).get()
                             .getParentNode();
+                    level = 0;
                     while (pn.isPresent()
                             && !pn.get().getClass().getSimpleName().toString().equals("MethodDeclaration")) {
                         pn = pn.get().getParentNode();
@@ -1018,21 +1007,25 @@ public class Analyzer {
 
                     if ((operatorFound && !forbidden) || (!operatorFound && forbidden)) {
                         jobject.put("success", true);
+                        requiredOperatorsFound.add(true);
                     } else if (operatorFound && forbidden) {
                         jobject.put("success", false);
                         jobject.put("errorCode", 310);
+                        requiredOperatorsFound.add(true);
                         System.out.println("Forbidden operator `" + operatorExpected + "` is present "
                                 + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
                         jobject.put("range", conditionalOperatorExpression.getRange().get());
+                        displayResult(jobject);
                     } else {
                         jobject.put("success", false);
                         jobject.put("errorCode", 311);
-                        System.out.println("Required operator `" + operatorExpected + "` is present but not "
-                                + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
-                        jobject.put("range", conditionalOperatorExpression.getRange().get());
                     }
-                    displayResult(jobject);
                 }
+            }
+
+            if (!(requiredOperatorsFound.stream().anyMatch(x -> x == true))) {
+                System.out.println("Required operator `" + operatorExpected + "` is present but not "
+                        + (requiredLevel == -1 ? "" : "at level: " + requiredLevel));
             }
         }
     }
@@ -1086,10 +1079,10 @@ public class Analyzer {
         public void visit(MethodCallExpr methodCallExpr, JSONObject jobject) {
             super.visit(methodCallExpr, jobject);
             Boolean requirement = (Boolean) jobject.get("requirement");
-             if (jobject.containsKey("success") && (Boolean) jobject.get("success") && requirement) {
-             return;
-             }
-            
+            if (jobject.containsKey("success") && (Boolean) jobject.get("success") && requirement) {
+                return;
+            }
+
             Boolean isCurrentClass = (Boolean) jobject.get("isCurrentClass");
             String requiredClassName = jobject.get("className").toString();
             String context = jobject.get("context").toString();
@@ -1097,27 +1090,31 @@ public class Analyzer {
 
             String callerName = "";
             if (methodCallExpr.getScope().isPresent()) {
-            	if ( methodCallExpr.getScope().get().isNameExpr() ) {
-            		try {
-            			callerName = methodCallExpr.getScope().get().asNameExpr().resolve().getType().asReferenceType().getQualifiedName();
-                        callerName = callerName.lastIndexOf('.') != -1 ? (callerName.substring( callerName.lastIndexOf('.')+1  , callerName.length())) : callerName;
-					} catch (Exception e) {
-						callerName = methodCallExpr.getScope().get().toString();
-					}
-            	} else {
-            		callerName = methodCallExpr.getScope().get().toString();
-            	}
+                if (methodCallExpr.getScope().get().isNameExpr()) {
+                    try {
+                        callerName = methodCallExpr.getScope().get().asNameExpr().resolve().getType().asReferenceType()
+                                .getQualifiedName();
+                        callerName = callerName.lastIndexOf('.') != -1
+                                ? (callerName.substring(callerName.lastIndexOf('.') + 1, callerName.length()))
+                                : callerName;
+                    } catch (Exception e) {
+                        callerName = methodCallExpr.getScope().get().toString();
+                    }
+                } else {
+                    callerName = methodCallExpr.getScope().get().toString();
+                }
             }
-            
-//            methodCallExpr.
-//            System.out.println(callerName);
-            
+
+            // methodCallExpr.
+            // System.out.println(callerName);
+
             if (((callerName.isEmpty() || callerName.equals("this")) && isCurrentClass) // Current Class
                     || callerName.equals(requiredClassName)) { // Class name
                 if (jobject.containsKey("methodName")) {
                     requiredMethodName = jobject.get("methodName").toString();
 
-//                    System.out.println("r: "+requiredMethodName+" p: "+methodCallExpr.getNameAsString());
+                    // System.out.println("r: "+requiredMethodName+" p:
+                    // "+methodCallExpr.getNameAsString());
                     if ((requiredMethodName.equals(methodCallExpr.getNameAsString()))) {
                         if (requirement) {
                             jobject.put("success", true);
@@ -1130,14 +1127,16 @@ public class Analyzer {
                             jobject.put("cu", Optional.empty());
                             System.out.println("Forbidden Method Call"
                                     + (requiredMethodName != null ? " '" + requiredMethodName + "'" : "")
-                                    + " is found at: " + methodCallExpr.getRange().get().begin+ " - Context: "+ context);
+                                    + " is found at: " + methodCallExpr.getRange().get().begin + " - Context: "
+                                    + context);
 
                         }
                     } else {
                         if (requirement) {
                             jobject.put("success", false);
                             jobject.put("errorCode", 272);
-//                            System.out.println("Required Method Call `" + requiredMethodName + "` is not present"+ " - Context: "+ context);
+                            // System.out.println("Required Method Call `" + requiredMethodName + "` is not
+                            // present"+ " - Context: "+ context);
                             // jobject.put("range", methodCallExpr.getRange().get());
                             // jobject.put("cu", Optional.empty());
                         } else {
@@ -1159,7 +1158,7 @@ public class Analyzer {
                         jobject.put("cu", Optional.empty());
                         System.out.println("Forbidden Method Call"
                                 + (requiredMethodName != null ? " '" + requiredMethodName + "'" : "") + " is found at: "
-                                + methodCallExpr.getRange().get().begin + " - Context: "+ context);
+                                + methodCallExpr.getRange().get().begin + " - Context: " + context);
 
                     }
                 }
@@ -1170,12 +1169,13 @@ public class Analyzer {
                     jobject.put("errorCode", 0);
                     jobject.put("range", methodCallExpr.getRange().get());
                 } else {
-                	 if (jobject.containsKey("methodName")) {
-                         requiredMethodName = jobject.get("methodName").toString();
-                         }
+                    if (jobject.containsKey("methodName")) {
+                        requiredMethodName = jobject.get("methodName").toString();
+                    }
                     jobject.put("success", false);
                     jobject.put("errorCode", 272);
-//                    System.out.println("Required Method Callm `" + requiredMethodName + "` is not present"+ " - Context: "+ context);
+                    // System.out.println("Required Method Callm `" + requiredMethodName + "` is not
+                    // present"+ " - Context: "+ context);
                     // jobject.put("range", methodCallExpr.getRange().get());
                     // jobject.put("cu", Optional.empty());
                 }
@@ -1199,7 +1199,7 @@ public class Analyzer {
 
             int level = 0;
             Optional<Node> pn = blockStatement.getParentNode();
-            while (pn.isPresent() && !pn.get().getClass().getSimpleName().toString().contains(context) ){
+            while (pn.isPresent() && !pn.get().getClass().getSimpleName().toString().contains(context)) {
                 pn = pn.get().getParentNode();
                 if (pn.get().getClass().getSimpleName().toString().equals("BlockStmt")) {
                     level++;
@@ -1212,14 +1212,15 @@ public class Analyzer {
             NodeList nodeList = blockStatement.getStatements();
             for (Object node : nodeList) {
                 String stmtSimpleName = node.getClass().getSimpleName().toString().replaceAll("Stmt", "");
-//                System.out.println("sn: " + stmtSimpleName +requiredConstructName);
+                // System.out.println("sn: " + stmtSimpleName +requiredConstructName);
                 if (stmtSimpleName.equalsIgnoreCase(requiredConstructName) && requiredLevel == level) {
                     constructFound = true;
                     Statement stmt = (Statement) node;
 
-//                    System.out.println("found");
-                    checkMethodCalls  (  getBlockStmt(stmt) ,(JSONObject) jobject.get("requiredConstruct") , stmtSimpleName);
-                    checkMethodConstructs (  getBlockStmt(stmt) ,(JSONObject) jobject.get("requiredConstruct") , stmtSimpleName);
+                    // System.out.println("found");
+                    checkMethodCalls(getBlockStmt(stmt), (JSONObject) jobject.get("requiredConstruct"), stmtSimpleName);
+                    checkMethodConstructs(getBlockStmt(stmt), (JSONObject) jobject.get("requiredConstruct"),
+                            stmtSimpleName);
                     jobject.put("range", stmt.getRange().get());
                 }
             }
@@ -1231,33 +1232,33 @@ public class Analyzer {
                 } else {
                     jobject.put("success", false);
                     jobject.put("errorCode", 291);
-                    System.out.println("Required Construct rules dont match" + "- Context: "+ context);
+                    System.out.println("Required Construct rules dont match" + "- Context: " + context);
                 }
             }
         }
 
     }
-    
-    private static BlockStmt getBlockStmt (Statement stmt) {
-    	if ( stmt.isBlockStmt() ) {
-    		return stmt.asBlockStmt();
-    	}
-    	if ( stmt.isForStmt() ) {
-    		return stmt.asForStmt().getBody().asBlockStmt();
-    	}
-    	if ( stmt.isIfStmt() ) {
-    		return stmt.asIfStmt().getThenStmt().asBlockStmt();
-    	}
-    	if ( stmt.isWhileStmt() ) {
-    		return stmt.asWhileStmt().getBody().asBlockStmt();
-    	}
-    	if ( stmt.isDoStmt() ) {
-    		return stmt.asDoStmt().getBody().asBlockStmt();
-    	}
-    	if ( stmt.isWhileStmt() ) {
-    		return stmt.asWhileStmt().getBody().asBlockStmt();
-    	}
-		return null;
+
+    private static BlockStmt getBlockStmt(Statement stmt) {
+        if (stmt.isBlockStmt()) {
+            return stmt.asBlockStmt();
+        }
+        if (stmt.isForStmt()) {
+            return stmt.asForStmt().getBody().asBlockStmt();
+        }
+        if (stmt.isIfStmt()) {
+            return stmt.asIfStmt().getThenStmt().asBlockStmt();
+        }
+        if (stmt.isWhileStmt()) {
+            return stmt.asWhileStmt().getBody().asBlockStmt();
+        }
+        if (stmt.isDoStmt()) {
+            return stmt.asDoStmt().getBody().asBlockStmt();
+        }
+        if (stmt.isWhileStmt()) {
+            return stmt.asWhileStmt().getBody().asBlockStmt();
+        }
+        return null;
     }
 
     // private static void putResult ( JSONObject result) {}

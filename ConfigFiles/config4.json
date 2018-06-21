@@ -1,4 +1,5 @@
 {
+	"maxNumberOfClasses" : 2,
   "requiredClass": {
     "name": "DemoMath",
     "requiredMethods": [
@@ -9,25 +10,37 @@
           { "name": "private", "forbidden": true }
         ],
         "modifiers": [
-        	{ "name": "static", "forbidden": true } ,
+        	{ "name": "static"} ,
         	{ "name": "abstract", "forbidden": true }
         ],
         "annotations": [
-        	{ "name": "override", "forbidden": true } ,
-        	{ "name": "abstract", "forbidden": true }
+        	{ "name": "override" }
         ],
-        "return": "long",
-      "parameters": [ "int", "int" ],
-        "restrictUserDefinedMethod": true,
-        "builtInMethods": [ { "name": "multiplyFull", "forbidden": true } ],
 
+        "return": "long",
+        "parameters": [ "int" ,"int" ],
+        "methodCalls": [
+        					{
+        						"className": "Math",
+        						"methodName" : "multiplyFull" ,
+        						"forbidden": true
+        					},{
+        						"className": "Math",
+        						"methodName" : "abs" ,
+        						"forbidden": true
+        					}
+        				],
         "operators": [
           {
-            "name": "++",
+            "name": "+",
             "level": 1
           },
           {
-            "name": "+",
+            "name": "++",
+            "level": 0
+          },
+          {
+            "name": "++",
             "level": 2
           },
           {
@@ -35,7 +48,33 @@
             "forbidden": true
           }
         ],
-        "constructs": [ { "name": "if" , "forbidden": true ,"level" : 0 } ]
+        "constructs": [ {
+        				"name": "for" ,
+        				"level" : 0 ,
+        				"methodCalls": [
+        					{
+        						"className": "Math",
+        						"methodName" : "multiplyFull" ,
+							    "forbidden": true
+        					},{
+        						"className": "Math",
+        						"methodName" : "abs" ,
+        						"forbidden": true
+        					}
+        				],
+        				"constructs": [ {
+        								"name": "if" ,
+        								"level" : 0 ,
+        								"methodCalls": [ {
+							        						"className": "Math",
+							        						"methodName" : "multiplyFull"
+							        					},{
+							        						"className": "Math",
+							        						"methodName" : "abs" ,
+							        						"forbidden": true
+							        					} ]
+        				} ]
+         } ]
       }
     ]
   }

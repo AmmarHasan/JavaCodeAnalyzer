@@ -4,16 +4,15 @@
 // Method signature is given and call to other user defined method is restricted
 
 public class DemoMath {
-    public static long multiply(int a, int b) {
-      long result = 0;
-      result = 1 + 1;
-      result++;
-      result = result == 1? 2: 0;
-      for (int i=0; i < a; i++) {
-        result += b;
-      }
-      return b;
+	@override
+   public static long multiply (int a, int b) {
+    long result = 0;
+    for (int i=0; i < a; i++) {
+        result = result + b;
+        result = b<0 ? 1 : b;
     }
+    return b;
+   }
 }
 
 
@@ -28,19 +27,37 @@ public class DemoMath {
 
 // Problems: using forbidden builtin method
 // public class DemoMath {
-//     public static long multiply(int a, int b) {
-//       for (int i=0; i < 2; i++) {}
-//       return Math.multiplyFull(a, b);
-//     }
-// }
+//      public static long multiply(int a, int b) {
+//        for (int i=0; i < 2; i++) {}
+//        Math.abs(-5);
+// //       Math.multiplyFull(a, b);
+//        return 1;//
+//      }
+//  }
 
 // Problems: implementing in user defined method
 // public class DemoMath {
 //     public static long multiply(int a, int b) {
 //       for (int i=0; i < 2; i++) {}
+////       long l = MyMultiply(a, b);
 //       return MyMultiply(a, b);
 //     }
 //     static long MyMutliply(int a, int b) {
 //       return a*b;
 //     }
 // }
+
+//Problems: implementing in constructs
+//public class DemoMath {
+//
+////@override
+// public static long multiply(int a, int b) {
+//    for (int i=0; i < 2; i++) {
+//    	if (true) {}
+//    }
+//    return a*b;
+//  }
+//
+//}
+
+

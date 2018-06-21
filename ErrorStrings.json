@@ -14,9 +14,17 @@
 	"251": "Method Other Modifier Don’t Match",
 	
 	"260": "Method Annotations Don’t Match ",
+	"261": "No Annotations Found",
 	
-	"270": "Method Doesn't Obey 'restrictUserDefinedMethod' Rule",
+	"270": "Method Doesn't Obey Method Call rules",
 	"275": "Method wasn't called'",
-	"280": "Built in Method Rules dont match"
+	"280": "Built in Method Rules dont match",
+	
+	"271": "Method Doesn't Obey Method Call rules",
+	"272": "Required Method Call not found",
+	"273": "Forbidden Method Call found",
+	
+	"290": "Method - Construct Not found",
+	"291": "Method - Constructs rules Don't Match'"
 	
 }

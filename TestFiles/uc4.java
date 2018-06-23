@@ -9,12 +9,28 @@ public class DemoMath {
      long result = 0;
      result = result + 10;
      result = result + 10;
-
+     Math m = new Math();
+     m.multiplyFull(a, b);
+     
+     ArrayList names = new ArrayList();
+     names.add("Chaitanya");
+     names.add("Steve");
+     names.add("Jack");
+  
+     Iterator it = names.iterator();
+  
+     while(it.hasNext()) {
+       String obj = (String)it.next();
+       System.out.println(obj);
+     }
+     
      for (int i=0; i < a; i++) {
        if(true) {}
      }
+     
      return b;
    }
+	public static void mm () {}
 }
 
 

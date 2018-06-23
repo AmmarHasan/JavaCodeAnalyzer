@@ -34,6 +34,7 @@ import com.github.javaparser.ast.visitor.VoidVisitor;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import com.github.javaparser.printer.JsonPrinter;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
+import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserSymbolDeclaration;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
 
@@ -531,7 +532,7 @@ public class Analyzer {
 	                if (requirement) {
 	                    required.put("success", false);
 	                    required.put("errorCode", 272); // Required Method but not found
-	                    System.out.println("Required Method Call is not present" + " - Context: "+ context);
+		            	System.out.println("Required Method Call "+ ( (required.containsKey("methodName"))? "'" +required.get("methodName").toString()+ "' " : "" )+"is not present" + " - Context: "+ context);
 	                } else {
 	                    required.put("success", true);
 	                    required.put("errorCode", 0);
@@ -662,7 +663,9 @@ public class Analyzer {
                     if (requirement) {
                         required.put("success", false);
                         required.put("errorCode", 290);
-                        System.out.println("Required Construct not found" + " - Context: "+ context);
+    	            	System.out.println("Required Construct "+ ( (required.containsKey("requiredConstructName"))? "'" +required.get("requiredConstructName").toString()+ "' " : "" )+"is not present" + " - Context: "+ context);
+
+//                        System.out.println("Required Construct not found" + " - Context: "+ context);
                     } else {
                         required.put("success", true);
                         required.put("errorCode", 0);
@@ -1102,7 +1105,19 @@ public class Analyzer {
             			callerName = methodCallExpr.getScope().get().asNameExpr().resolve().getType().asReferenceType().getQualifiedName();
                         callerName = callerName.lastIndexOf('.') != -1 ? (callerName.substring( callerName.lastIndexOf('.')+1  , callerName.length())) : callerName;
 					} catch (Exception e) {
-						callerName = methodCallExpr.getScope().get().toString();
+						try {
+							JavaParserSymbolDeclaration jpsd = (JavaParserSymbolDeclaration) methodCallExpr.getScope().get().asNameExpr().resolve();
+							Node wrappedNode = jpsd.getWrappedNode();
+							List<Node> childNodes = wrappedNode.getChildNodes();
+							for (Node n : childNodes) {
+								if ( n.getClass().getSimpleName().equalsIgnoreCase("ClassOrInterfaceType") ){
+									callerName = n.toString();
+								}
+//								System.out.println(n + " " + );
+							}
+						} catch (Exception e2) {
+							callerName = methodCallExpr.getScope().get().toString();
+						}
 					}
             	} else {
             		callerName = methodCallExpr.getScope().get().toString();

@@ -4,7 +4,7 @@
 // Method signature is given and call to other user defined method is restricted
 
 public class DemoMath {
-	@override
+	
    public static long multiply (int a, int b) {
      long result = 0;
      result = result + 10;
@@ -29,6 +29,12 @@ public class DemoMath {
      }
      
      return b;
+    long result = 0;
+    for (int i=0; i < a; i++) {
+        result = result + b;
+        result = b<0 ? 1 : b;
+    }
+    return b;
    }
 	public static void mm () {}
 }

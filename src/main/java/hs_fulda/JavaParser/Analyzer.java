@@ -1242,7 +1242,7 @@ public class Analyzer {
                 } else {
                     jobject.put("success", false);
                     jobject.put("errorCode", 291);
-                    System.out.println("Required Construct rules dont match" + "- Context: " + context);
+                    System.out.println("Required Construct rules dont match" + (((Range) jobject.get("range") != null) ? (" is found at: " + ((Range) jobject.get("range")).begin) : "") + " - Context: " + context);
                 }
             }
         }

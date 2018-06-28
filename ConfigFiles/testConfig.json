@@ -1,0 +1,35 @@
+{
+	"maxNumberOfClasses" : 1,
+	"requiredClass": {
+    	"name": "TestCase4",
+    	"accessModifier": 
+    	[
+      		{ "name": "public" },
+      		{ "name": "private", "forbidden": true }
+    	],
+    	"modifier": [
+      		{ "name": "abstract" },
+      		{ "name": "static", "forbidden": true }
+    	],
+    	"requiredMethods": [
+	    {
+	        "name": "TenaryOperator",
+	        "return": "void",
+	        "parameters": [],
+	        "accessModifiers": [
+	          { "name": "public" },
+	          { "name": "private", "forbidden": true }
+	        ],
+	        "modifiers": [
+	        	{ "name": "static"} ,
+	        	{ "name": "abstract", "forbidden": true }
+	        ],
+	        "operators": [
+          		{ "name": "?", "level": 0 }
+			],
+			"constructs": [ 
+				{ "name": "if", "level" : 0, "forbidden": true}
+			]
+		}]
+    }
+}

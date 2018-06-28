@@ -21,12 +21,19 @@
         "parameters": [ "int" ,"int" ],
         "methodCalls": [
         					{
+        						"className": "ArrayList" ,
+        						"forbidden": true
+        					},{
         						"className": "Math",
         						"methodName" : "multiplyFull" ,
         						"forbidden": true
         					},{
         						"className": "Math",
         						"methodName" : "abs" ,
+        						"forbidden": true
+        					},{
+        						"className": "Iterator",
+        						"methodName" : "next" ,
         						"forbidden": true
         					}
         				],
@@ -58,8 +65,7 @@
 							    "forbidden": true
         					},{
         						"className": "Math",
-        						"methodName" : "abs" ,
-        						"forbidden": true
+        						"methodName" : "abs" 
         					}
         				],
         				"constructs": [ {

@@ -4,8 +4,31 @@
 // Method signature is given and call to other user defined method is restricted
 
 public class DemoMath {
-	@override
+	
    public static long multiply (int a, int b) {
+     long result = 0;
+     result = result + 10;
+     result = result + 10;
+     Math m = new Math();
+     m.multiplyFull(a, b);
+     
+     ArrayList names = new ArrayList();
+     names.add("Chaitanya");
+     names.add("Steve");
+     names.add("Jack");
+  
+     Iterator it = names.iterator();
+  
+     while(it.hasNext()) {
+       String obj = (String)it.next();
+       System.out.println(obj);
+     }
+     
+     for (int i=0; i < a; i++) {
+       if(true) {}
+     }
+     
+     return b;
     long result = 0;
     for (int i=0; i < a; i++) {
         result = result + b;
@@ -13,6 +36,7 @@ public class DemoMath {
     }
     return b;
    }
+	public static void mm () {}
 }
 
 

@@ -1,0 +1,35 @@
+{
+  "maxNumberOfClasses" : 7,
+  "requiredClass": {
+      "name": "TestCase7",
+      "accessModifier": 
+      [
+          { "name": "public" },
+          { "name": "private", "forbidden": true }
+      ],
+      "modifier": [
+          { "name": "abstract" },
+          { "name": "static", "forbidden": true }
+      ],
+      "requiredMethods": [
+      {
+          "name": "IteratorWithoutForLoop",
+          "return": "void",
+          "parameters" : [],
+      "constructs": [ 
+        { "name": "for", "level" : 0, "forbidden": true},
+      ],
+      "methodCalls": [
+                { "className": "ArrayList" ,"methodName" : "add"}
+          ],
+      "constructs": [ 
+        {   "name": "while", "level" : 0,
+          "methodCalls": [
+                { "className": "Iterator" ,"methodName" : "next"}
+              ]
+        }
+      ]
+          
+    }]
+    }
+}

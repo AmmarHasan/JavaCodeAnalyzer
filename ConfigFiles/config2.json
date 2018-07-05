@@ -3,7 +3,7 @@
     "name": "Person",
     "modifier": [
       {
-        "name": "static"
+        "name": "final"
       },
       {
         "name": "abstract",

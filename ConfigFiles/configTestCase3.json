@@ -1,0 +1,43 @@
+{
+  "maxNumberOfClasses" : 3,
+  "requiredClass": {
+      "name": "TestCase3",
+      "accessModifier": 
+      [
+          { "name": "public" },
+          { "name": "private", "forbidden": true }
+      ],
+      "modifier": [
+          { "name": "abstract" },
+          { "name": "static", "forbidden": true }
+      ],
+      "parentClass": [
+          { "name": "Einstein" }
+      ],
+      "interfaceToImplement": [
+        { "name": "Darwin" },
+        { "name": "Farhaday" },
+        { "name": "Newton", "forbidden": true }
+      ],
+      "requiredMethods": [
+      {
+          "name": "multiply",
+          "return": "long",
+          "parameters": [ "int","int" ],
+          "accessModifiers": [
+            { "name": "public" },
+            { "name": "private", "forbidden": true }
+          ],
+          "modifiers": [
+            { "name": "static"} ,
+            { "name": "abstract", "forbidden": true }
+          ],
+          "annotations": [
+            { "name": "override", "forbidden": true }
+          ],
+          "methodCalls": [
+            { "className": "Math" , "forbidden": true}
+          ]
+    }]
+  }
+}

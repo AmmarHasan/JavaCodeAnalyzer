@@ -1,0 +1,25 @@
+{
+  "maxNumberOfClasses" : 5,
+  "requiredClass": {
+      "name": "TestCase5",
+      "accessModifier": 
+      [
+          { "name": "public" },
+          { "name": "private", "forbidden": true }
+      ],
+      "modifier": [
+          { "name": "abstract" },
+          { "name": "static", "forbidden": true }
+      ],
+      "requiredMethods": [
+      {
+          "name": "SummationUsingWhileLoop",
+          "return": "void",
+          "parameters" : [],
+      "constructs": [ 
+        { "name": "for", "level" : 0, "forbidden": true},
+        { "name": "while", "level" : 0}
+      ]  
+    }]
+    }
+}

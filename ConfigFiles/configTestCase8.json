@@ -1,0 +1,29 @@
+{
+  "maxNumberOfClasses" : 8,
+  "requiredClass": {
+      "name": "TestCase8",
+      "accessModifier": 
+      [
+          { "name": "public" },
+          { "name": "private", "forbidden": true }
+      ],
+      "modifier": [
+          { "name": "abstract" },
+          { "name": "static", "forbidden": true }
+      ],
+      "requiredMethods": [
+      {
+          "name": "implem",
+          "return": "void",
+          "parameters" : [],
+      "constructs": [ 
+        {   "name": "for", "level" : 0,
+          "methodCalls": [
+                { "className": "TestCase8" ,"methodName" : "fibonacci"}
+              ]
+        },
+      ]
+          
+    }]
+    }
+}

@@ -1,0 +1,15 @@
+{
+	"maxNumberOfClasses" : 1,
+	"requiredClass": {
+    	"name": "TestCase1",
+    	"accessModifier": 
+    	[
+      		{ "name": "public" },
+      		{ "name": "private", "forbidden": true }
+    	],
+    	"modifier": [
+      		{ "name": "abstract" },
+      		{ "name": "static", "forbidden": true }
+    	]
+	 }
+}

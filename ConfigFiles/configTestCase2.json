@@ -1,0 +1,43 @@
+{
+  "maxNumberOfClasses" : 2,
+  "requiredClass": {
+      "name": "TestCase2",
+      "accessModifier": 
+      [
+          { "name": "public" },
+          { "name": "private", "forbidden": true }
+      ],
+      "modifier": [
+          { "name": "abstract" },
+          { "name": "static", "forbidden": true }
+      ],
+      "parentClass": [
+          { "name": "Einstein" }
+      ],
+      "interfaceToImplement": [
+        { "name": "Darwin" },
+        { "name": "Farhaday" },
+        { "name": "Newton", "forbidden": true }
+      ],
+      "requiredMethods": [
+      {
+          "name": "fibonacci",
+          "return": "long",
+          "parameters": [ "long" ],
+          "accessModifiers": [
+            { "name": "public" },
+            { "name": "private", "forbidden": true }
+          ],
+          "modifiers": [
+            { "name": "static"} ,
+            { "name": "abstract", "forbidden": true }
+          ],
+          "annotations": [
+            { "name": "override", "forbidden": true }
+          ],
+          "methodCalls": [
+            { "className": "", "methodName":"fibonacci" }
+          ]
+    }]
+  }
+}

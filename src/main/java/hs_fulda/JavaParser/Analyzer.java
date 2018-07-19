@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.ParseProblemException;
 import com.github.javaparser.Range;
 import com.github.javaparser.ast.AccessSpecifier;
 import com.github.javaparser.ast.CompilationUnit;
@@ -55,6 +56,16 @@ import org.json.simple.parser.JSONParser;
  *
  */
 public class Analyzer {
+
+    public static Boolean validCode(String codeSnippet) {
+        try {
+            JavaParser.parse(codeSnippet);
+        } catch (ParseProblemException ex) {
+            // System.out.println(ex);
+            return false;
+        }
+        return true;
+    }
 
 	/**
 	 * <h2>parseJavaFile</h2>

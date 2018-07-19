@@ -139,11 +139,11 @@ public class Analyzer {
                         status = 1;
                     } else if (isContain(compare, req_ConstructName) == true
                             && req_ConstructRule.equalsIgnoreCase("true")) {
-                        System.out.println("Found Forbidden Access Modifier: " + req_ConstructName);
+                        System.out.println("Error Message: Found Forbidden Access Modifier: " + req_ConstructName);
                         status = 2;
                     } else if (isContain(compare, req_ConstructName) == false
                             && req_ConstructRule.equalsIgnoreCase("false")) {
-                        System.out.println("Required Access Modifier not Found: " + req_ConstructName);
+                        System.out.println("Error Message: Required Access Modifier not Found: " + req_ConstructName);
                         printLine(classNode);
                         status = 2;
 
@@ -169,12 +169,12 @@ public class Analyzer {
 
                     } else if (isContain(compare, req_ConstructName) == true
                             && req_ConstructRule.equalsIgnoreCase("true")) {
-                        System.out.println("Found Forbidden Modifier: " + req_ConstructName);
+                        System.out.println("Error Message: Found Forbidden Modifier: " + req_ConstructName);
                         printLine(classNode);
                         status = 2;
                     } else if (isContain(compare, req_ConstructName) == false
                             && req_ConstructRule.equalsIgnoreCase("false")) {
-                        System.out.println("Required Modifier not Found: " + req_ConstructName);
+                        System.out.println("Error Message: Required Modifier not Found: " + req_ConstructName);
                         printLine(classNode);
                         status = 2;
 
@@ -202,18 +202,18 @@ public class Analyzer {
                         status = 1;
                     } else if (isContain(compSuper, req_ConstructName) == true
                             && req_ConstructRule.equalsIgnoreCase("true")) {
-                        System.out.println("Found Forbidden Parent Class: " + req_ConstructName);
+                        System.out.println("Error Message: Found Forbidden Parent Class: " + req_ConstructName);
                         printLine(classNode);
                         status = 2;
                         break;
                     } else if (classNode.getExtendedTypes().isEmpty()) {
-                        System.out.println("No Parent Class Extended");
+                        System.out.println("Error Message: No Parent Class Extended");
                         printLine(classNode);
                         status = 2;
                         break;
                     } else if (isContain(compSuper, req_ConstructName) == false
                             && req_ConstructRule.equalsIgnoreCase("false")) {
-                        System.out.println("Required Parent Class not Extended: " + req_ConstructName);
+                        System.out.println("Error Message: Required Parent Class not Extended: " + req_ConstructName);
                         printLine(classNode);
                         status = 2;
 
@@ -246,17 +246,17 @@ public class Analyzer {
                         status = 1;
                     } else if (isContain(compare, req_ConstructName) == true
                             && req_ConstructRule.equalsIgnoreCase("true")) {
-                        System.out.println("Found Forbidden Interface: " + req_ConstructName);
+                        System.out.println("Error Message: Found Forbidden Interface: " + req_ConstructName);
                         printLine(classNode);
                         status = 2;
                     } else if (classNode.getImplementedTypes().isEmpty()) {
-                        System.out.println("No Interface Implemented");
+                        System.out.println("Error Message: No Interface Implemented");
                         printLine(classNode);
                         status = 2;
                         break;
                     } else if (isContain(compare, req_ConstructName) == false
                             && req_ConstructRule.equalsIgnoreCase("false")) {
-                        System.out.println("Required Interface not Implemented: " + req_ConstructName);
+                        System.out.println("Error Message: Required Interface not Implemented: " + req_ConstructName);
                         printLine(classNode);
                         status = 2;
                     }
@@ -281,7 +281,7 @@ public class Analyzer {
             }
 
         } else {
-            System.out.println("The required class was not found");
+            System.out.println("Error Message: The required class was not found");
             return null;
         }
     }
@@ -348,7 +348,7 @@ public class Analyzer {
      * Specified node
      */
     private static void printLine(Node node) {
-        node.getRange().ifPresent(r -> System.out.println("line: " + r.begin.line));
+        node.getRange().ifPresent(r -> System.out.println("Location: "+"(line " + r.begin.line+ ","+ "col "+ r.begin.column +")"));
     }
 
     /**
